@@ -16,17 +16,44 @@ import com.example.modules.InventoryModule;
 import com.example.modules.PatientModule;
 import com.example.modules.TransferModule;
 
+import io.github.cdimascio.dotenv.Dotenv;
+
 public class App {
 
-    // Database configuration
-    private static final String DB_URL =
-            System.getenv().getOrDefault(
-                    "REDTHREAD_DB_URL",
-                    "jdbc:mysql://localhost:3306/osdbms?useSSL=false&serverTimezone=UTC"
-            );
+    private static final Dotenv dotenv = Dotenv.configure()
+            .ignoreIfMissing()
+            .load();
 
-    private static final String DB_USER =
-            System.getenv().getOrDefault("REDTHREAD_DB_USER", "root");
+    private static final String DB_URL = resolveSetting(
+            "REDTHREAD_DB_URL",
+            "jdbc:mysql://localhost:3306/osdbms?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+    );
+
+    private static final String DB_USER = resolveSetting(
+            "REDTHREAD_DB_USER",
+            "root"
+    );
+
+    private static final String DB_PASSWORD = resolveSetting(
+            "REDTHREAD_DB_PASSWORD",
+            ""
+    );
+
+    static String resolveSetting(String key, String defaultValue) {
+        String value = System.getenv(key);
+        if (value != null && !value.trim().isEmpty()) {
+            return value.trim();
+        }
+
+        value = dotenv.get(key);
+        if (value != null && !value.trim().isEmpty()) {
+            return value.trim();
+        }
+
+        return defaultValue;
+    }
+
+    // setup for mysql env done 
 
     public static void main(String[] args) {
 
@@ -34,15 +61,15 @@ public class App {
         System.out.println("   RedThread Blood Bank Management System (OSDBMS)");
         System.out.println("==================================================");
 
-        // Read the database password from an environment variable.
-        String dbPassword = System.getenv("REDTHREAD_DB_PASSWORD");
+        String dbPassword = DB_PASSWORD;
 
+        
         if (dbPassword == null || dbPassword.isEmpty()) {
             System.out.println(
                     "[ERROR] Database password is not configured."
             );
             System.out.println(
-                    "Set the REDTHREAD_DB_PASSWORD environment variable."
+                    "Set the REDTHREAD_DB_PASSWORD environment variable or add it to a .env file."
             );
             return;
         }
@@ -67,6 +94,11 @@ public class App {
                 printMenu();
 
                 System.out.print("Select an option [0-10]: ");
+
+                if (!scanner.hasNextLine()) {
+                    System.out.println("\n[INFO] No input received. Closing RedThread.");
+                    break;
+                }
 
                 String input = scanner.nextLine().trim();
 
@@ -175,6 +207,11 @@ public class App {
                     System.out.println(
                             "\nPress Enter to return to the main menu..."
                     );
+                    if (!scanner.hasNextLine()) {
+                        System.out.println("[INFO] Input stream closed. Closing RedThread.");
+                        running = false;
+                        continue;
+                    }
                     scanner.nextLine();
                 }
             }

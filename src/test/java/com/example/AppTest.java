@@ -6,7 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class AppTest {
     @Test
-    void exampleTest() {
-        assertEquals(2, 1 + 1);
+    void resolveSettingUsesProvidedFallbackWhenKeyIsMissing() {
+        assertEquals("fallback", App.resolveSetting("REDTHREAD_MISSING_SETTING", "fallback"));
+    }
+
+    @Test
+    void resolveSettingUsesDefaultDatabaseUserWhenUnset() {
+        assertEquals("root", App.resolveSetting("REDTHREAD_DB_USER", "root"));
     }
 }
