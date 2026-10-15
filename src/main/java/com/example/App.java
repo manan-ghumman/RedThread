@@ -144,7 +144,7 @@ public class App {
 
                     // OPTION 5: BLOOD ALLOCATION
                     case 5:
-                        AllocationModule.allocateRequest(conn, scanner);
+                        AllocationModule.allocateRequest(conn);
                         break;
 
                     // OPTION 6: SYSTEM ALERTS
