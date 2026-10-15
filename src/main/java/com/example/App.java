@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.util.Scanner;
 
 import com.example.modules.AlertModule;
+import com.example.modules.AllocationHistory;
 import com.example.modules.AllocationModule;
 import com.example.modules.BloodRequestModule;
 import com.example.modules.CompatibilityModule;
@@ -189,6 +190,11 @@ public class App {
                         CompatibilityModule.menu(conn, scanner);
                         break;
 
+                    // OPTION 11: VIEW ALLOCATION HISTORY
+                    case 11:
+                        AllocationHistory.viewHistory(conn);
+                        break;
+
                     // EXIT APPLICATION
                     case 0:
                         System.out.println(
@@ -239,6 +245,7 @@ public class App {
         System.out.println("8. Facility Management");
         System.out.println("9. Blood Transfer Management");
         System.out.println("10. Blood Compatibility");
+        System.out.println("11. View Allocation History");
         System.out.println("0. Exit");
 
         System.out.println("=======================================");
