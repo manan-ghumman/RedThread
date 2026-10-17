@@ -12,8 +12,8 @@ public class AlertModule {
 
         String query = "SELECT AlertID, FacilityID, AlertType, Message, CreatedAt " +
                        "FROM ALERT " +
-                       "WHERE IsRead = FALSE " +
-                       "ORDER BY CreatedAt DESC LIMIT 10";
+        "WHERE IsRead = FALSE " +
+        "ORDER BY CreatedAt DESC LIMIT 10";
 
         try (Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(query)) {

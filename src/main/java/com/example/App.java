@@ -3,6 +3,12 @@ package com.example;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Scanner;
 
 import com.example.modules.AlertModule;
@@ -17,22 +23,18 @@ import com.example.modules.InventoryModule;
 import com.example.modules.PatientModule;
 import com.example.modules.TransferModule;
 
-import io.github.cdimascio.dotenv.Dotenv;
-
 public class App {
 
-    private static final Dotenv dotenv = Dotenv.configure()
-            .ignoreIfMissing()
-            .load();
+    private static final Map<String, String> localSettings = loadLocalSettings();
 
     private static final String DB_URL = resolveSetting(
             "REDTHREAD_DB_URL",
-            "jdbc:mysql://localhost:3306/osdbms?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+            "jdbc:mysql://sql12.freesqldatabase.com:3306/sql12839033?useSSL=true&serverTimezone=UTC"
     );
 
     private static final String DB_USER = resolveSetting(
             "REDTHREAD_DB_USER",
-            "root"
+            "sql12839033"
     );
 
     private static final String DB_PASSWORD = resolveSetting(
@@ -41,12 +43,12 @@ public class App {
     );
 
     static String resolveSetting(String key, String defaultValue) {
-        String value = System.getenv(key);
-        if (value != null && !value.trim().isEmpty()) {
-            return value.trim();
+        String fileValue = localSettings.get(key);
+        if (fileValue != null && !fileValue.trim().isEmpty()) {
+            return fileValue.trim();
         }
 
-        value = dotenv.get(key);
+        String value = System.getenv(key);
         if (value != null && !value.trim().isEmpty()) {
             return value.trim();
         }
@@ -54,7 +56,45 @@ public class App {
         return defaultValue;
     }
 
-    // setup for mysql env done 
+    private static Map<String, String> loadLocalSettings() {
+        Map<String, String> settings = new HashMap<>();
+        Path envFile = Path.of(".env");
+
+        if (!Files.exists(envFile)) {
+            return settings;
+        }
+
+        try {
+            for (String line : Files.readAllLines(envFile)) {
+                String trimmed = line.trim();
+                if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+                    continue;
+                }
+
+                int separator = trimmed.indexOf('=');
+                if (separator <= 0) {
+                    continue;
+                }
+
+                String key = trimmed.substring(0, separator).trim();
+                String value = trimmed.substring(separator + 1).trim();
+                settings.put(key, removeOptionalQuotes(value));
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("Unable to read .env configuration", e);
+        }
+
+        return settings;
+    }
+
+    private static String removeOptionalQuotes(String value) {
+        if (value.length() >= 2
+                && ((value.startsWith("\"") && value.endsWith("\""))
+                || (value.startsWith("'") && value.endsWith("'")))) {
+            return value.substring(1, value.length() - 1);
+        }
+        return value;
+    }
 
     public static void main(String[] args) {
 
@@ -85,7 +125,7 @@ public class App {
             conn.setAutoCommit(true);
 
             System.out.println(
-                    "\n[INFO] Connected successfully to MySQL database 'osdbms'."
+                    "\n[INFO] Connected successfully to MySQL database 'sql12839033'."
             );
 
             boolean running = true;

@@ -12,6 +12,13 @@ class AppTest {
 
     @Test
     void resolveSettingUsesDefaultDatabaseUserWhenUnset() {
-        assertEquals("root", App.resolveSetting("REDTHREAD_DB_USER", "root"));
+        assertEquals(
+                "sql12839033",
+                App.resolveSetting(
+                        "REDTHREAD_MISSING_DB_USER",
+                        "sql12839033"
+                )
+        );
     }
+
 }

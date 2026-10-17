@@ -2,4 +2,6 @@
 .env.*
 !.env.example
 target/
+.vscode/
 project_database.md
+osdbms_blood_bank.sql
