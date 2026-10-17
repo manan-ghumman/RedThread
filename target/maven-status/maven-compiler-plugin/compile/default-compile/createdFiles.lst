@@ -1,11 +1,13 @@
-com\example\modules\AllocationModule.class
+com\example\modules\AllocationHistory.class
 com\example\modules\InventoryModule.class
 com\example\modules\FacilityModule.class
 com\example\modules\TransferModule.class
 com\example\modules\PatientModule.class
-com\example\App.class
 com\example\modules\CompatibilityModule.class
-com\example\modules\AlertModule.class
 com\example\modules\DonorModule.class
+com\example\modules\AllocationModule$BloodRequest.class
+com\example\modules\AllocationModule.class
+com\example\App.class
+com\example\modules\AlertModule.class
 com\example\modules\BloodRequestModule.class
 com\example\modules\DonationModule.class
