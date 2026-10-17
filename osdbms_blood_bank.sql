@@ -416,3 +416,70 @@ DELIMITER ;
 SHOW TABLES;
 SELECT * FROM DONOR;
 SELECT * FROM BLOOD_COMPONENT;
+
+
+--check scheduling and allocation 
+SELECT RequestID, Priority, RequestTime, Status
+FROM BLOOD_REQUEST
+WHERE Status = 'Pending'
+ORDER BY FIELD(Priority, 'Critical', 'Emergency', 'Urgent', 'Routine'),
+         RequestTime,
+         RequestID;
+         
+         SELECT br.RequestID, br.Priority, br.Status,
+       a.ComponentID, a.AllocatedAt,
+       d.RedThreadID, d.KarmaPoints, bc.ExpiryDate
+FROM ALLOCATION a
+JOIN BLOOD_REQUEST br ON br.RequestID = a.RequestID
+JOIN BLOOD_COMPONENT bc ON bc.ComponentID = a.ComponentID
+JOIN DONATION dn ON dn.DonationID = bc.DonationID
+JOIN DONOR d ON d.RedThreadID = dn.RedThreadID
+ORDER BY a.AllocatedAt DESC
+LIMIT 10;
+
+USE osdbms;
+
+SHOW TABLES;
+
+DESCRIBE blood_request;
+
+--check triggers
+SHOW TRIGGERS FROM osdbms;
+
+SELECT RedThreadID, Name, EligibilityStatus
+FROM DONOR;
+
+SELECT RedThreadID, DonationDate
+FROM DONATION
+ORDER BY RedThreadID, DonationDate;
+
+DESCRIBE DONATION;
+
+SELECT FacilityID
+FROM FACILITY;
+
+SELECT *
+FROM DONATION
+WHERE DonationID IN ('DN_TEST01', 'DN_TEST02');
+
+SELECT DonationID FROM DONATION;
+
+USE osdbms;
+
+INSERT INTO DONATION
+    (DonationID, RedThreadID, DonationDate, Volume_mL, FacilityID)
+VALUES
+    ('DN_TEST01', 'D001', '2026-09-20', 450, 'F001');
+
+INSERT INTO DONATION
+    (DonationID, RedThreadID, DonationDate, Volume_mL, FacilityID)
+VALUES
+    ('DN_TEST02', 'D005', '2026-11-10', 450, 'F001');
+    
+SELECT *
+FROM DONATION
+WHERE DonationID IN ('DN_TEST01', 'DN_TEST02');
+
+DELETE FROM DONATION
+WHERE DonationID = 'DN_TEST02';
+
