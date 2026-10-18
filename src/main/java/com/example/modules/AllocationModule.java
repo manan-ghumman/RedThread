@@ -15,6 +15,7 @@ public class AllocationModule {
     // Stores the details of each pending blood request
     static class BloodRequest {
         String requestId;
+        String redThreadId;
         String priority;
         String bloodType;
         String componentType;
@@ -25,6 +26,7 @@ public class AllocationModule {
 
         BloodRequest(
         String requestId,
+        String redThreadId,
         String priority,
         String bloodType,
         String componentType,
@@ -35,6 +37,7 @@ public class AllocationModule {
         {
 
     this.requestId = requestId;
+    this.redThreadId = redThreadId;
     this.priority = priority;
     this.bloodType = bloodType;
     this.componentType = componentType;
@@ -87,11 +90,10 @@ public class AllocationModule {
 
         // Fetch pending requests and add them to the priority queue.
         String query =
-        "SELECT br.RequestID, br.Priority, br.BloodType, " +
+        "SELECT br.RequestID, br.RedThreadID, br.Priority, br.BloodType, " +
         "br.ComponentType, br.FacilityID, br.RequestTime, " +
-        "br.Quantity, p.KarmaPoints " +
+        "br.Quantity, 0 AS KarmaPoints " +
         "FROM BLOOD_REQUEST br " +
-        "JOIN PATIENT p ON br.PatientID = p.PatientID " +
         "WHERE br.Status = 'Pending'";
 
         try (PreparedStatement ps = conn.prepareStatement(query);
@@ -100,6 +102,7 @@ public class AllocationModule {
             while (rs.next()) {
                 requestQueue.offer(new BloodRequest(
                        rs.getString("RequestID"),
+                       rs.getString("RedThreadID"),
                        rs.getString("Priority"),
                        rs.getString("BloodType"),
                        rs.getString("ComponentType"),
@@ -178,16 +181,18 @@ public class AllocationModule {
                     "FROM BLOOD_COMPONENT bc " +
                     "JOIN DONATION dn ON dn.DonationID = bc.DonationID " +
                     "JOIN DONOR d ON d.RedThreadID = dn.RedThreadID " +
+                    "JOIN PERSON donor_person " +
+                    "ON donor_person.RedThreadID = d.RedThreadID " +
                     "WHERE bc.Type = ? " +
                     "AND bc.Status = 'Available' " +
                     "AND bc.ExpiryDate >= CURDATE() " +
                     "AND bc.FacilityID = ? " +
-                    "AND (d.BloodType = ? OR " +
+                    "AND (donor_person.BloodType = ? OR " +
                     "(? = 'RBC' AND EXISTS (" +
                     "SELECT 1 FROM BLOOD_COMPATIBILITY c " +
-                    "WHERE c.DonorType = d.BloodType " +
+                    "WHERE c.DonorType = donor_person.BloodType " +
                     "AND c.RecipientType = ?))) " +
-                    "ORDER BY (d.BloodType = ?) DESC, " +
+                    "ORDER BY (donor_person.BloodType = ?) DESC, " +
                     "bc.ExpiryDate ASC, " +
                     "CASE WHEN ? = 'Routine' " +
                     "THEN d.KarmaPoints ELSE 0 END DESC, " +
@@ -232,10 +237,11 @@ System.out.println("Compatible units found: " + components.size());
                 // Reserve the selected blood component.
                 try (PreparedStatement ps = conn.prepareStatement(
                         "UPDATE BLOOD_COMPONENT " +
-                        "SET Status = 'Reserved' " +
+                        "SET Status = 'Reserved', RecipientRedThreadID = ? " +
                         "WHERE ComponentID = ? AND Status = 'Available'")) {
 
-                    ps.setString(1, componentId);
+                    ps.setString(1, request.redThreadId);
+                    ps.setString(2, componentId);
 
                     if (ps.executeUpdate() != 1) {
                         throw new SQLException(
@@ -259,7 +265,7 @@ System.out.println("Compatible units found: " + components.size());
                     ps.executeUpdate();
                 }
             }
-
+            
             try (PreparedStatement ps = conn.prepareStatement(
                     "UPDATE BLOOD_REQUEST SET Status = 'Allocated' " +
                     "WHERE RequestID = ? AND Status = 'Pending'")) {

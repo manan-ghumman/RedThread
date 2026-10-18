@@ -47,7 +47,7 @@ public class BloodRequestModule {
         String priority = scanner.nextLine().trim();
 
         String sql = "INSERT INTO BLOOD_REQUEST " +
-                "(RequestID, PatientID, FacilityID, ComponentType, " +
+                "(RequestID, RedThreadID, FacilityID, ComponentType, " +
                 "BloodType, Quantity, Priority, Status) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending')";
 

@@ -20,23 +20,38 @@ public class DonorModule {
         System.out.print("Enter Blood Type (A+, A-, B+, B-, AB+, AB-, O+, O-): ");
         String bloodType = scanner.nextLine().trim().toUpperCase();
 
-        String sql = "INSERT INTO DONOR " +
-                "(RedThreadID, Name, BloodType, KarmaPoints, EligibilityStatus) " +
-                "VALUES (?, ?, ?, 0, 'Eligible')";
+        boolean previousAutoCommit;
+        try {
+            previousAutoCommit = conn.getAutoCommit();
+            conn.setAutoCommit(false);
 
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            try (PreparedStatement person = conn.prepareStatement(
+                    "INSERT INTO PERSON (RedThreadID, Name, BloodType) " +
+                    "VALUES (?, ?, ?)")) {
+                person.setString(1, donorId);
+                person.setString(2, name);
+                person.setString(3, bloodType);
+                person.executeUpdate();
+            }
 
-            pstmt.setString(1, donorId);
-            pstmt.setString(2, name);
-            pstmt.setString(3, bloodType);
+            try (PreparedStatement donor = conn.prepareStatement(
+                    "INSERT INTO DONOR " +
+                    "(RedThreadID, KarmaPoints, EligibilityStatus) " +
+                    "VALUES (?, 0, 'Eligible')")) {
+                donor.setString(1, donorId);
+                int rows = donor.executeUpdate();
+                conn.commit();
 
-            int rows = pstmt.executeUpdate();
-
-            System.out.println(
-                    "[SUCCESS] Donor registered successfully! Rows affected: " + rows);
+                System.out.println(
+                        "[SUCCESS] Donor registered successfully! Rows affected: " + rows);
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(previousAutoCommit);
+            }
 
         } catch (SQLException e) {
-
             System.err.println(
                     "[ERROR] Failed to register donor: " + e.getMessage());
         }

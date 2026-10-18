@@ -58,15 +58,30 @@ public class PatientModule {
         System.out.print("Enter Blood Group: ");
         String bloodType = scanner.nextLine().trim().toUpperCase();
 
-        String sql =
-                "INSERT INTO PATIENT (PatientID, BloodType) VALUES (?, ?)";
+        boolean previousAutoCommit;
+        try {
+            previousAutoCommit = conn.getAutoCommit();
+            conn.setAutoCommit(false);
 
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            try (PreparedStatement person = conn.prepareStatement(
+                    "INSERT INTO PERSON (RedThreadID, Name, BloodType) " +
+                    "VALUES (?, NULL, ?)")) {
+                person.setString(1, patientId);
+                person.setString(2, bloodType);
+                person.executeUpdate();
+            }
 
-            ps.setString(1, patientId);
-            ps.setString(2, bloodType);
-
-            ps.executeUpdate();
+            try (PreparedStatement patient = conn.prepareStatement(
+                    "INSERT INTO PATIENT (RedThreadID) VALUES (?)")) {
+                patient.setString(1, patientId);
+                patient.executeUpdate();
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(previousAutoCommit);
+            }
 
             System.out.println(
                     "Patient registered successfully!");
@@ -81,7 +96,10 @@ public class PatientModule {
     private static void viewPatients(Connection conn) {
 
         String sql =
-                "SELECT PatientID, BloodType FROM PATIENT ORDER BY PatientID";
+                "SELECT p.RedThreadID, person.BloodType " +
+                "FROM PATIENT p " +
+                "JOIN PERSON person ON person.RedThreadID = p.RedThreadID " +
+                "ORDER BY p.RedThreadID";
 
         try (PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -99,7 +117,7 @@ public class PatientModule {
                 found = true;
 
                 System.out.printf("%-20s | %-12s%n",
-                        rs.getString("PatientID"),
+                        rs.getString("RedThreadID"),
                         rs.getString("BloodType"));
             }
 
