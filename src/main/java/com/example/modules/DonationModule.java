@@ -2,6 +2,7 @@ package com.example.modules;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Scanner;
 
@@ -36,6 +37,26 @@ public class DonationModule {
         String sql = "INSERT INTO DONATION " +
                 "(DonationID, RedThreadID, DonationDate, Volume_mL, FacilityID) " +
                 "VALUES (?, ?, ?, ?, ?)";
+
+        try (PreparedStatement facilityCheck = conn.prepareStatement(
+                "SELECT 1 FROM FACILITY WHERE FacilityID = ?")) {
+
+            facilityCheck.setString(1, facilityId);
+
+            try (ResultSet rs = facilityCheck.executeQuery()) {
+                if (!rs.next()) {
+                    System.out.println(
+                            "[ERROR] Facility ID does not exist: " + facilityId
+                                    + ". Enter an ID from the FACILITY table.");
+                    return;
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println(
+                    "[DONATION FAILED] Unable to validate facility: "
+                            + e.getMessage());
+            return;
+        }
 
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
 

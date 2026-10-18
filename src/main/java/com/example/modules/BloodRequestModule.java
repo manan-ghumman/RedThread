@@ -2,6 +2,7 @@ package com.example.modules;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Scanner;
 
@@ -50,6 +51,36 @@ public class BloodRequestModule {
                 "BloodType, Quantity, Priority, Status) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending')";
 
+        try {
+            if (!conn.isValid(5)) {
+                System.out.println(
+                        "[ERROR] Database connection has expired. "
+                                + "Restart the application and try again.");
+                return;
+            }
+        } catch (SQLException e) {
+            printDatabaseError("check database connection", e);
+            return;
+        }
+
+        try (PreparedStatement facilityCheck = conn.prepareStatement(
+                "SELECT 1 FROM FACILITY WHERE FacilityID = ?")) {
+
+            facilityCheck.setString(1, facilityId);
+
+            try (ResultSet rs = facilityCheck.executeQuery()) {
+                if (!rs.next()) {
+                    System.out.println(
+                            "[ERROR] Facility ID does not exist: " + facilityId
+                                    + ". Enter an ID from the FACILITY table.");
+                    return;
+                }
+            }
+        } catch (SQLException e) {
+            printDatabaseError("validate facility", e);
+            return;
+        }
+
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, requestId);
@@ -71,9 +102,19 @@ public class BloodRequestModule {
 
         } catch (SQLException e) {
 
-            System.out.println(
-                    "[ERROR] Failed to raise blood request: "
-                    + e.getMessage());
+            printDatabaseError("raise blood request", e);
         }
+    }
+
+    private static void printDatabaseError(String operation, SQLException e) {
+        if (e.getSQLState() != null && e.getSQLState().startsWith("08")) {
+            System.out.println(
+                    "[ERROR] Database connection was lost while attempting to "
+                    + operation + ". Restart the application and try again.");
+            return;
+        }
+
+        System.out.println(
+                "[ERROR] Failed to " + operation + ": " + e.getMessage());
     }
 }
