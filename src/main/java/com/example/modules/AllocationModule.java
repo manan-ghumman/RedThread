@@ -1,7 +1,11 @@
 
 package com.example.modules;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.Comparator;
 import java.util.PriorityQueue;
 import java.util.UUID;
@@ -17,34 +21,47 @@ public class AllocationModule {
         String facilityId;
         Timestamp requestTime;
         int quantity;
+        int karmaPoints;//added
 
         BloodRequest(
-                String requestId,
-                String priority,
-                String bloodType,
-                String componentType,
-                String facilityId,
-                Timestamp requestTime,
-                int quantity) {
+        String requestId,
+        String priority,
+        String bloodType,
+        String componentType,
+        String facilityId,
+        Timestamp requestTime,
+        int quantity,
+        int karmaPoints)//addded 
+        {
 
-            this.requestId = requestId;
-            this.priority = priority;
-            this.bloodType = bloodType;
-            this.componentType = componentType;
-            this.facilityId = facilityId;
-            this.requestTime = requestTime;
-            this.quantity = quantity;
-        }
+    this.requestId = requestId;
+    this.priority = priority;
+    this.bloodType = bloodType;
+    this.componentType = componentType;
+    this.facilityId = facilityId;
+    this.requestTime = requestTime;
+    this.quantity = quantity;
+    this.karmaPoints = karmaPoints;
+}
     }
 
     // PRIORITY SCHEDULING:
     // Critical -> Emergency -> Urgent -> Routine
     // FCFS breaks ties within the same priority.
+
     private static final Comparator<BloodRequest> REQUEST_ORDER =
-            Comparator.comparingInt(
-                    (BloodRequest r) -> getPriorityRank(r.priority))
-                    .thenComparing(r -> r.requestTime)
-                    .thenComparing(r -> r.requestId);
+        Comparator.comparingInt(
+                (BloodRequest r) -> getPriorityRank(r.priority))
+                // First: higher-priority requests
+                .thenComparing(r -> r.requestTime)
+                // Second: FCFS — earlier requests first
+                .thenComparing(
+                        Comparator.comparingInt(
+                                (BloodRequest r) -> r.karmaPoints
+                        ).reversed()
+                )
+                // Third: higher Karma Points first
+                .thenComparing(r -> r.requestId);
 
     private static int getPriorityRank(String priority) {
         switch (priority) {
@@ -70,22 +87,26 @@ public class AllocationModule {
 
         // Fetch pending requests and add them to the priority queue.
         String query =
-                "SELECT RequestID, Priority, BloodType, ComponentType, " +
-                "FacilityID, RequestTime, Quantity " +
-                "FROM BLOOD_REQUEST WHERE Status = 'Pending'";
+        "SELECT br.RequestID, br.Priority, br.BloodType, " +
+        "br.ComponentType, br.FacilityID, br.RequestTime, " +
+        "br.Quantity, p.KarmaPoints " +
+        "FROM BLOOD_REQUEST br " +
+        "JOIN PATIENT p ON br.PatientID = p.PatientID " +
+        "WHERE br.Status = 'Pending'";
 
         try (PreparedStatement ps = conn.prepareStatement(query);
              ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
                 requestQueue.offer(new BloodRequest(
-                        rs.getString("RequestID"),
-                        rs.getString("Priority"),
-                        rs.getString("BloodType"),
-                        rs.getString("ComponentType"),
-                        rs.getString("FacilityID"),
-                        rs.getTimestamp("RequestTime"),
-                        rs.getInt("Quantity")
+                       rs.getString("RequestID"),
+                       rs.getString("Priority"),
+                       rs.getString("BloodType"),
+                       rs.getString("ComponentType"),
+                       rs.getString("FacilityID"),
+                       rs.getTimestamp("RequestTime"),
+                       rs.getInt("Quantity"),
+                       rs.getInt("KarmaPoints")
                 ));
             }
 
@@ -105,20 +126,22 @@ public class AllocationModule {
 
         // DEQUEUE: process requests in scheduling order.
         while (!requestQueue.isEmpty()) {
+    BloodRequest request = requestQueue.poll();
 
-            BloodRequest request = requestQueue.poll();
+    System.out.println("\nProcessing: " + request.requestId);
+    System.out.println("Priority: " + request.priority);
+    System.out.println("Arrival: " + request.requestTime);
 
-            System.out.println("\nProcessing: " + request.requestId);
-            System.out.println("Priority: " + request.priority);
-            System.out.println("Arrival: " + request.requestTime);
+    // Display the Karma Points of the patient requesting blood
+    System.out.println("Patient Karma Points: " + request.karmaPoints);
 
-            try {
-                allocateOneRequest(conn, request);
-            } catch (SQLException e) {
-                System.out.println("Allocation failed for "
-                        + request.requestId + ": " + e.getMessage());
-            }
-        }
+    try {
+        allocateOneRequest(conn, request);
+    } catch (SQLException e) {
+        System.out.println("Allocation failed for "
+                + request.requestId + ": " + e.getMessage());
+    }
+}
 
         System.out.println("\nQueue processing completed.");
     }
@@ -192,11 +215,15 @@ public class AllocationModule {
                 }
             }
 
+//change
+System.out.println("Request ID: " + request.requestId);
+System.out.println("Required quantity: " + request.quantity);
+System.out.println("Compatible units found: " + components.size());
             // Do not partially allocate a request.
             if (components.size() < request.quantity) {
                 conn.rollback();
                 System.out.println(
-                        "Insufficient compatible stock. Request remains pending.");
+                        "Insufficient compatible stock. Request forwarded to city or state.");
                 return;
             }
 
