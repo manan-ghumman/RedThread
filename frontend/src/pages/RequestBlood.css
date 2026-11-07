@@ -1,0 +1,194 @@
+
+.rb-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f7f7f7;
+  color: #222;
+  font-family: Arial, sans-serif;
+}
+
+.rb-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: #a91f32;
+  color: white;
+  padding: 25px 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.rb-sidebar h2 {
+  margin: 0 0 25px;
+  font-size: 26px;
+}
+
+.rb-label {
+  font-size: 11px;
+  letter-spacing: 1px;
+  opacity: 0.8;
+  margin-bottom: 20px;
+}
+
+.rb-sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rb-menu {
+  padding: 13px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: 0.2s;
+}
+
+.rb-menu:hover,
+.rb-menu.active {
+  background: white;
+  color: #a91f32;
+}
+
+.rb-logout {
+  margin-top: auto;
+}
+
+.rb-main {
+  flex: 1;
+  min-width: 0;
+  padding: 35px;
+}
+
+.rb-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.rb-header h1 {
+  margin: 0 0 8px;
+}
+
+.rb-header p {
+  color: #777;
+  margin: 0;
+}
+
+.rb-admin {
+  background: white;
+  color: #a91f32;
+  padding: 10px 15px;
+  border-radius: 5px;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.rb-form-container {
+  max-width: 850px;
+  background: white;
+  padding: 30px;
+  border-radius: 7px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.rb-form-container h2 {
+  color: #a91f32;
+  margin-top: 0;
+}
+
+.rb-description {
+  color: #777;
+  font-size: 14px;
+  margin-bottom: 25px;
+}
+
+.rb-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.rb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.rb-field label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.rb-field input,
+.rb-field select,
+.rb-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+}
+
+.rb-field input:focus,
+.rb-field select:focus,
+.rb-field textarea:focus {
+  outline: none;
+  border-color: #a91f32;
+}
+
+.rb-field textarea {
+  resize: vertical;
+}
+
+.rb-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.rb-submit,
+.rb-cancel {
+  padding: 13px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.rb-submit {
+  background: #a91f32;
+  color: white;
+  border: 1px solid #a91f32;
+}
+
+.rb-cancel {
+  background: white;
+  color: #a91f32;
+  border: 1px solid #a91f32;
+}
+
+@media (max-width: 800px) {
+  .rb-layout {
+    flex-direction: column;
+  }
+
+  .rb-sidebar {
+    width: auto;
+  }
+
+  .rb-main {
+    padding: 20px;
+  }
+
+  .rb-form {
+    grid-template-columns: 1fr;
+  }
+
+  .rb-form-actions {
+    flex-direction: column;
+  }
+}

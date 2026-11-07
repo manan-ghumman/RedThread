@@ -1,0 +1,177 @@
+
+.dp-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #fff;
+  font-family: Arial, sans-serif;
+}
+
+.dp-sidebar {
+  width: 240px;
+  background: #a91f32;
+  color: white;
+  padding: 28px 18px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.dp-sidebar h2 {
+  margin-bottom: 30px;
+}
+
+.dp-label {
+  font-size: 12px;
+  margin-bottom: 15px;
+  opacity: 0.8;
+}
+
+.dp-menu {
+  padding: 11px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+
+.dp-menu:hover {
+  background: #861728;
+}
+
+.dp-menu.active {
+  background: white;
+  color: #a91f32;
+}
+
+.dp-logout {
+  margin-top: auto;
+}
+
+.dp-main {
+  flex: 1;
+  padding: 35px;
+  min-width: 0;
+}
+
+.dp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.dp-header h1 {
+  font-size: 26px;
+  color: #222;
+}
+
+.dp-header span {
+  color: #555;
+}
+
+.dp-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 35px;
+}
+
+.dp-stat-box {
+  border: 1px solid #e5e5e5;
+  padding: 22px;
+  border-radius: 6px;
+  background: white;
+}
+
+.dp-stat-box h3 {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 15px;
+}
+
+.dp-stat-box h2 {
+  font-size: 23px;
+  color: #a91f32;
+}
+
+.dp-section {
+  margin-bottom: 35px;
+}
+
+.dp-section h2 {
+  font-size: 19px;
+  margin-bottom: 18px;
+  color: #222;
+}
+
+.dp-table-wrapper {
+  overflow-x: auto;
+}
+
+.dp-table-wrapper table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+.dp-table-wrapper th,
+.dp-table-wrapper td {
+  padding: 14px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+  font-size: 14px;
+}
+
+.dp-table-wrapper th {
+  background: #f7f7f7;
+  color: #444;
+}
+
+.dp-actions {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.dp-actions button {
+  background: #a91f32;
+  color: white;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.dp-actions button:hover {
+  background: #861728;
+}
+
+@media (max-width: 1000px) {
+  .dp-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 650px) {
+  .dp-layout {
+    flex-direction: column;
+  }
+
+  .dp-sidebar {
+    width: auto;
+  }
+
+  .dp-main {
+    padding: 20px;
+  }
+
+  .dp-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .dp-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+}

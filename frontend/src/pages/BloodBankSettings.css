@@ -1,0 +1,110 @@
+
+.bb-settings-form {
+  max-width: 850px;
+}
+
+.bb-settings-section {
+  margin-top: 30px;
+  border: 1px solid #dddddd;
+  border-radius: 4px;
+  padding: 24px;
+}
+
+.bb-settings-section h2 {
+  font-size: 19px;
+  margin: 0 0 22px;
+}
+
+.bb-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.bb-settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bb-settings-field label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.bb-settings-field input,
+.bb-settings-field textarea {
+  padding: 11px 12px;
+  border: 1px solid #dddddd;
+  border-radius: 4px;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  outline: none;
+}
+
+.bb-settings-field input:focus,
+.bb-settings-field textarea:focus {
+  border-color: #a91f32;
+}
+
+.bb-settings-field input[readonly] {
+  background: #f3f3f3;
+  cursor: default;
+}
+
+.bb-settings-field textarea {
+  resize: vertical;
+}
+
+.bb-full-width {
+  grid-column: 1 / -1;
+}
+
+.bb-notification-options {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.bb-notification-options label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.bb-notification-options input {
+  accent-color: #a91f32;
+  width: 16px;
+  height: 16px;
+}
+
+.bb-save-button {
+  margin-top: 25px;
+  background: #a91f32;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 12px 22px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.bb-save-button:hover {
+  background: #8d192a;
+}
+
+@media (max-width: 600px) {
+  .bb-settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bb-full-width {
+    grid-column: auto;
+  }
+
+  .bb-settings-section {
+    padding: 18px;
+  }
+}

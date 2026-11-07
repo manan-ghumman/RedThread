@@ -1,0 +1,74 @@
+
+.bb-requests-page {
+  margin-top: 35px;
+}
+
+.bb-requests-page h2 {
+  font-size: 19px;
+  margin-bottom: 18px;
+}
+
+.bb-request-filters {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.bb-request-filters input,
+.bb-request-filters select {
+  padding: 11px 14px;
+  border: 1px solid #dddddd;
+  border-radius: 4px;
+  background: white;
+  color: #333333;
+  font-size: 14px;
+}
+
+.bb-request-filters input {
+  flex: 1;
+  min-width: 220px;
+}
+
+.bb-request-filters select {
+  min-width: 170px;
+  cursor: pointer;
+}
+
+.bb-request-actions {
+  display: flex;
+  gap: 7px;
+}
+
+.bb-request-actions button {
+  border: none;
+  border-radius: 4px;
+  padding: 8px 10px;
+  cursor: pointer;
+  background: #a91f32;
+  color: white;
+  font-size: 12px;
+}
+
+.bb-request-actions button:hover {
+  background: #8d192a;
+}
+
+.bb-requests-page .bb-table-wrapper {
+  overflow-x: auto;
+}
+
+.bb-requests-page table {
+  min-width: 1050px;
+}
+
+@media (max-width: 600px) {
+  .bb-request-filters {
+    flex-direction: column;
+  }
+
+  .bb-request-filters input,
+  .bb-request-filters select {
+    width: 100%;
+  }
+}

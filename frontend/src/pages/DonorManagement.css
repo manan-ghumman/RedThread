@@ -1,0 +1,55 @@
+
+.bb-donor-section {
+  margin-top: 35px;
+}
+
+.bb-donor-section h2 {
+  font-size: 19px;
+  margin-bottom: 18px;
+}
+
+.bb-donor-filters {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.bb-donor-filters input,
+.bb-donor-filters select {
+  padding: 11px 14px;
+  border: 1px solid #dddddd;
+  border-radius: 4px;
+  background: white;
+  color: #333333;
+  font-size: 14px;
+}
+
+.bb-donor-filters input {
+  flex: 1;
+  min-width: 220px;
+}
+
+.bb-donor-filters select {
+  min-width: 180px;
+  cursor: pointer;
+}
+
+.bb-donor-section .bb-table-wrapper {
+  overflow-x: auto;
+}
+
+.bb-donor-section table {
+  min-width: 850px;
+}
+
+@media (max-width: 600px) {
+  .bb-donor-filters {
+    flex-direction: column;
+  }
+
+  .bb-donor-filters input,
+  .bb-donor-filters select {
+    width: 100%;
+  }
+}

@@ -1,0 +1,90 @@
+
+.donor-page {
+  min-height: 100vh;
+  background: white;
+  color: #222;
+  font-family: Arial, sans-serif;
+}
+
+.donor-header {
+  background: #a91f32;
+  color: white;
+  padding: 20px 35px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.donor-header h1 {
+  margin: 0;
+}
+
+.donor-container {
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 30px;
+  border: 1px solid #a91f32;
+  border-radius: 4px;
+}
+
+.donor-container h2 {
+  color: #a91f32;
+  text-align: center;
+}
+
+.donor-container > p {
+  text-align: center;
+  color: #777;
+  margin-bottom: 25px;
+}
+
+.donor-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.donor-form label {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.donor-form input,
+.donor-form select {
+  padding: 11px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  margin-bottom: 10px;
+}
+
+.donor-form input:focus,
+.donor-form select:focus {
+  outline: none;
+  border-color: #a91f32;
+}
+
+.donor-form button {
+  background: #a91f32;
+  color: white;
+  padding: 13px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.donor-back {
+  display: block;
+  margin: 20px auto 0;
+  background: white;
+  border: none;
+  color: #a91f32;
+  cursor: pointer;
+}
+
+@media (max-width: 650px) {
+  .donor-container {
+    margin: 20px;
+    padding: 20px;
+  }
+}

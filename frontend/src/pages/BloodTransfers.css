@@ -1,0 +1,49 @@
+
+.bb-transfer-section {
+  margin-top: 35px;
+}
+
+.bb-transfer-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+  gap: 15px;
+}
+
+.bb-transfer-heading h2 {
+  font-size: 19px;
+  margin: 0;
+}
+
+.bb-transfer-heading select {
+  padding: 10px 14px;
+  border: 1px solid #dddddd;
+  border-radius: 4px;
+  background: white;
+}
+
+.bb-transfer-section table {
+  min-width: 1100px;
+}
+
+.bb-transfer-button {
+  background: #a91f32;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.bb-transfer-button:hover {
+  background: #8d192a;
+}
+
+@media (max-width: 600px) {
+  .bb-transfer-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

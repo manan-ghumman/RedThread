@@ -1,0 +1,188 @@
+
+* {
+  box-sizing: border-box;
+}
+
+.login-page {
+  min-height: 100vh;
+  background: #ffffff;
+  color: #292929;
+  font-family: Arial, sans-serif;
+}
+
+.login-header {
+  min-height: 85px;
+  padding: 15px 6%;
+  border-bottom: 2px solid #b42332;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.brand h1 {
+  color: #b42332;
+  font-size: 30px;
+  margin: 0;
+}
+
+.brand p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #666666;
+}
+
+.header-tag {
+  color: #b42332;
+  font-size: 14px;
+}
+
+.login-content {
+  max-width: 1050px;
+  margin: 65px auto;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 55px;
+  align-items: center;
+}
+
+.login-section h2 {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  color: #777777;
+  margin-bottom: 25px;
+}
+
+.login-box {
+  border: 1.5px solid #b42332;
+  padding: 28px;
+  max-width: 480px;
+}
+
+.login-box h3 {
+  color: #b42332;
+  font-size: 22px;
+  margin: 0 0 22px;
+}
+
+.login-box label {
+  display: block;
+  margin: 15px 0 7px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.login-box input,
+.login-box select {
+  width: 100%;
+  height: 40px;
+  padding: 9px;
+  border: 1px solid #cccccc;
+  background: white;
+  font-size: 14px;
+  outline: none;
+}
+
+.login-box input:focus,
+.login-box select:focus {
+  border-color: #b42332;
+}
+
+.login-box button {
+  width: 100%;
+  margin-top: 24px;
+  height: 42px;
+  background: #b42332;
+  color: white;
+  border: 1px solid #b42332;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.login-box button:hover {
+  background: #921b28;
+}
+
+.login-note {
+  text-align: center;
+  font-size: 12px;
+  color: #777777;
+  margin: 16px 0 0;
+}
+
+.donor-panel {
+  border: 2px solid #b42332;
+  text-align: center;
+  padding: 30px 18px;
+}
+
+.donor-panel h3 {
+  color: #b42332;
+  font-size: 19px;
+}
+
+.donor-number {
+  color: #b42332;
+  font-size: 38px;
+  font-weight: bold;
+  margin: 25px 0 10px;
+}
+
+.donor-panel p {
+  font-size: 13px;
+  color: #666666;
+}
+
+.donor-divider {
+  height: 1px;
+  background: #dddddd;
+  margin: 22px 0;
+}
+
+.donor-panel .donor-message {
+  color: #b42332;
+  font-weight: 600;
+}
+
+.login-footer {
+  text-align: center;
+  padding: 20px;
+  border-top: 1px solid #eeeeee;
+  color: #777777;
+  font-size: 12px;
+}
+
+@media (max-width: 700px) {
+  .login-header {
+    padding: 15px 5%;
+  }
+
+  .header-tag {
+    display: none;
+  }
+
+  .login-content {
+    grid-template-columns: 1fr;
+    margin: 25px auto;
+    gap: 25px;
+  }
+
+  .login-box {
+    max-width: 100%;
+  }
+}
+
+.register-link {
+  text-align: center;
+  font-size: 14px;
+  margin-top: 18px;
+}
+
+.register-link a {
+  color: #a91f32;
+  text-decoration: none;
+  font-weight: bold;
+}

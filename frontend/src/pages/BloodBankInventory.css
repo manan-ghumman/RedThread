@@ -1,0 +1,44 @@
+.bb-inventory-section {
+  margin-top: 35px;
+}
+
+.bb-inventory-section h2 {
+  font-size: 19px;
+  margin-bottom: 18px;
+}
+
+.bb-filters {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.bb-filters select {
+  padding: 11px 14px;
+  border: 1px solid #dddddd;
+  border-radius: 4px;
+  background: white;
+  color: #333333;
+  font-size: 14px;
+  min-width: 170px;
+  cursor: pointer;
+}
+
+.bb-inventory-section .bb-table-wrapper {
+  overflow-x: auto;
+}
+
+.bb-inventory-section table {
+  min-width: 750px;
+}
+
+@media (max-width: 600px) {
+  .bb-filters {
+    flex-direction: column;
+  }
+
+  .bb-filters select {
+    width: 100%;
+  }
+}
