@@ -1,18 +1,55 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './HospitalRequests.css';
 
 function HospitalRequests() {
   const navigate = useNavigate();
 
-  const [requests, setRequests] = useState([
-    { id: 'R001', hospital: 'City Hospital', group: 'O+', component: 'Packed RBC', units: 2, priority: 'Emergency', status: 'Pending' },
-    { id: 'R002', hospital: 'Care Hospital', group: 'B+', component: 'Platelets', units: 3, priority: 'Normal', status: 'Pending' },
-    { id: 'R003', hospital: 'Civil Hospital', group: 'AB-', component: 'Plasma', units: 1, priority: 'Rare Group', status: 'Approved' },
-    { id: 'R004', hospital: 'Metro Hospital', group: 'O-', component: 'Whole Blood', units: 2, priority: 'Accident Zone', status: 'Pending' },
-    { id: 'R005', hospital: 'City Hospital', group: 'A+', component: 'Packed RBC', units: 1, priority: 'Normal', status: 'Fulfilled' }
-  ]);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [allocating, setAllocating] = useState(false);
+
+  const fetchRequests = () => {
+    fetch('/api/requests')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setRequests(data.map(r => ({
+            id: r.requestId,
+            hospital: r.facilityId || 'District Hospital',
+            group: r.bloodType,
+            component: r.componentType,
+            units: r.quantity,
+            priority: r.priority,
+            status: r.status
+          })));
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching requests:', err);
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  const handleAllocateAll = async () => {
+    setAllocating(true);
+    try {
+      const res = await fetch('/api/allocate', { method: 'POST' });
+      const data = await res.json();
+      alert(data.message || 'Allocation processed successfully!');
+      fetchRequests();
+    } catch (err) {
+      alert('Allocation error: ' + err.message);
+    } finally {
+      setAllocating(false);
+    }
+  };
 
   const [search, setSearch] = useState('');
   const [priority, setPriority] = useState('All');
@@ -95,7 +132,24 @@ function HospitalRequests() {
         </section>
 
         <section className="bb-requests-page">
-          <h2>All Hospital Requests</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h2>All Hospital Requests</h2>
+            <button
+              onClick={handleAllocateAll}
+              disabled={allocating}
+              style={{
+                backgroundColor: '#b91c1c',
+                color: '#ffffff',
+                border: 'none',
+                padding: '8px 18px',
+                borderRadius: '6px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              {allocating ? 'Allocating...' : '⚡ Run Automated Blood Allocation'}
+            </button>
+          </div>
 
           <div className="bb-request-filters">
             <input

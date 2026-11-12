@@ -1,6 +1,7 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { saveUser } from '../utils/auth';
 import './Login.css';
 
 function Login() {
@@ -9,8 +10,21 @@ function Login() {
   const [role, setRole] = useState('Hospital');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [donorCount, setDonorCount] = useState('100+');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleLogin = (e) => {
+  useEffect(() => {
+    fetch('/api/auth/stats')
+      .then(r => r.json())
+      .then(data => {
+        if (data && data.donorCount) {
+          setDonorCount(String(data.donorCount));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleLogin = async (e) => {
     e.preventDefault();
 
     if (!username.trim() || !password) {
@@ -18,17 +32,43 @@ function Login() {
       return;
     }
 
-    if (role === 'Hospital') {
-      navigate('/dashboard');
-    } 
-    else if (role === 'Blood Bank') {
-      navigate('/blood-bank');
-    } 
-    else if (role === 'Donor') {
-      navigate('/donor-dashboard');
-    } 
-    else if (role === 'Admin') {
-      navigate('/admin-dashboard');
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: username.trim(),
+          password: password,
+          role: role
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        saveUser({
+          userId: data.userId,
+          username: data.username,
+          role: data.role,
+          associatedId: data.associatedId
+        });
+
+        if (role === 'Hospital') {
+          navigate('/dashboard');
+        } else if (role === 'Blood Bank') {
+          navigate('/blood-bank');
+        } else if (role === 'Donor') {
+          navigate('/donor-dashboard');
+        } else if (role === 'Admin') {
+          navigate('/admin-dashboard');
+        }
+      } else {
+        alert(data.error || 'Login failed. Please check credentials.');
+      }
+    } catch (err) {
+      alert('Failed to connect to authentication server: ' + err.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -81,7 +121,9 @@ function Login() {
               onChange={(e) => setPassword(e.target.value)}
             />
 
-            <button type="submit">Log In</button>
+            <button type="submit" disabled={submitting}>
+              {submitting ? 'Logging in...' : 'Log In'}
+            </button>
 
             <p className="login-note">
               Secure access to your RedThread account
@@ -95,7 +137,7 @@ function Login() {
 
         <aside className="donor-panel">
           <h3>Registered Donors</h3>
-          <div className="donor-number">2,XXX</div>
+          <div className="donor-number">{donorCount}</div>
           <p>People registered with RedThread</p>
           <div className="donor-divider"></div>
           <p className="donor-message">

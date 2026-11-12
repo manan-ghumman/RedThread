@@ -1,13 +1,51 @@
 
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './RequestBlood.css';
 
 function RequestBlood() {
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const [patientId, setPatientId] = useState('');
+  const [patientName, setPatientName] = useState('');
+  const [bloodType, setBloodType] = useState('');
+  const [component, setComponent] = useState('Packed Red Blood Cells');
+  const [units, setUnits] = useState('1');
+  const [priority, setPriority] = useState('Emergency');
+  const [requiredDate, setRequiredDate] = useState('');
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert('Blood request submitted successfully!');
+    setSubmitting(true);
+
+    try {
+      const res = await fetch('/api/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patientId: patientId,
+          bloodType: bloodType,
+          componentType: component,
+          quantity: units,
+          priority: priority,
+          facilityId: 'F005'
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message || 'Blood request submitted successfully!');
+        navigate('/request-history');
+      } else {
+        alert('Error: ' + (data.error || 'Failed to submit blood request'));
+      }
+    } catch (err) {
+      alert('Network error connecting to API: ' + err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -75,7 +113,9 @@ function RequestBlood() {
               <label>Patient ID</label>
               <input
                 type="text"
-                placeholder="Enter patient ID"
+                placeholder="Enter patient ID (e.g. RT0101)"
+                value={patientId}
+                onChange={e => setPatientId(e.target.value)}
                 required
               />
             </div>
@@ -85,13 +125,19 @@ function RequestBlood() {
               <input
                 type="text"
                 placeholder="Enter patient name"
+                value={patientName}
+                onChange={e => setPatientName(e.target.value)}
                 required
               />
             </div>
 
             <div className="rb-field">
               <label>Blood Group Required</label>
-              <select required defaultValue="">
+              <select
+                value={bloodType}
+                onChange={e => setBloodType(e.target.value)}
+                required
+              >
                 <option value="" disabled>Select blood group</option>
                 <option>A+</option>
                 <option>A-</option>
@@ -106,8 +152,11 @@ function RequestBlood() {
 
             <div className="rb-field">
               <label>Blood Component</label>
-              <select required defaultValue="">
-                <option value="" disabled>Select component</option>
+              <select
+                value={component}
+                onChange={e => setComponent(e.target.value)}
+                required
+              >
                 <option value="Whole Blood">Whole Blood</option>
                 <option value="Packed Red Blood Cells">Packed Red Blood Cells</option>
                 <option value="Platelets">Platelets</option>
@@ -122,18 +171,22 @@ function RequestBlood() {
                 type="number"
                 placeholder="Enter number of units"
                 min="1"
+                value={units}
+                onChange={e => setUnits(e.target.value)}
                 required
               />
             </div>
 
             <div className="rb-field">
               <label>Request Priority</label>
-              <select required defaultValue="">
-                <option value="" disabled>Select priority</option>
-                <option value="1">Emergency</option>
-                <option value="2">Accident Zone</option>
-                <option value="3">Rare Blood Group</option>
-                <option value="4">Normal</option>
+              <select
+                value={priority}
+                onChange={e => setPriority(e.target.value)}
+                required
+              >
+                <option value="Emergency">Emergency</option>
+                <option value="Urgent">Urgent</option>
+                <option value="Routine">Routine</option>
               </select>
             </div>
 
@@ -141,6 +194,8 @@ function RequestBlood() {
               <label>Required By Date</label>
               <input
                 type="date"
+                value={requiredDate}
+                onChange={e => setRequiredDate(e.target.value)}
                 required
               />
             </div>
@@ -150,13 +205,15 @@ function RequestBlood() {
               <textarea
                 placeholder="Enter reason or medical requirement"
                 rows="4"
+                value={reason}
+                onChange={e => setReason(e.target.value)}
                 required
               />
             </div>
 
             <div className="rb-form-actions">
-              <button type="submit" className="rb-submit">
-                Submit Blood Request
+              <button type="submit" className="rb-submit" disabled={submitting}>
+                {submitting ? 'Submitting...' : 'Submit Blood Request'}
               </button>
 
               <button

@@ -1,60 +1,36 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './RequestHistory.css';
 
 function RequestHistory() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState('All');
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Sample data for demonstration
-  const requests = [
-    {
-      id: 'R001',
-      date: '2026-11-01',
-      blood: 'O+',
-      component: 'Packed Red Blood Cells',
-      units: 2,
-      priority: 'Emergency',
-      status: 'Pending'
-    },
-    {
-      id: 'R002',
-      date: '2026-10-30',
-      blood: 'B+',
-      component: 'Whole Blood',
-      units: 3,
-      priority: 'Normal',
-      status: 'Approved'
-    },
-    {
-      id: 'R003',
-      date: '2026-10-28',
-      blood: 'AB-',
-      component: 'Platelets',
-      units: 1,
-      priority: 'Rare Blood Group',
-      status: 'Fulfilled'
-    },
-    {
-      id: 'R004',
-      date: '2026-10-25',
-      blood: 'A+',
-      component: 'Plasma',
-      units: 2,
-      priority: 'Accident Zone',
-      status: 'Rejected'
-    },
-    {
-      id: 'R005',
-      date: '2026-10-22',
-      blood: 'O-',
-      component: 'Packed Red Blood Cells',
-      units: 1,
-      priority: 'Emergency',
-      status: 'Pending'
-    }
-  ];
+  useEffect(() => {
+    fetch('/api/requests')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setRequests(data.map(r => ({
+            id: r.requestId,
+            date: r.requestTime ? r.requestTime.split(' ')[0] : '2026-11-10',
+            blood: r.bloodType,
+            component: r.componentType,
+            units: r.quantity,
+            priority: r.priority,
+            status: r.status
+          })));
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching requests:', err);
+        setLoading(false);
+      });
+  }, []);
 
   const filteredRequests = filter === 'All'
     ? requests

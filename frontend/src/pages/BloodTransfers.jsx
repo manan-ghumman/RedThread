@@ -1,24 +1,57 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './BloodTransfers.css';
 
 function BloodTransfers() {
   const navigate = useNavigate();
 
-  const [transfers, setTransfers] = useState([
-    { id: 'T001', unit: 'BC005', group: 'O-', component: 'Whole Blood', from: 'Central Bank', to: 'City Branch', date: '2026-11-06', status: 'In Transit' },
-    { id: 'T002', unit: 'BC007', group: 'A+', component: 'Packed RBC', from: 'City Branch', to: 'Central Bank', date: '2026-11-05', status: 'Completed' },
-    { id: 'T003', unit: 'BC008', group: 'B+', component: 'Platelets', from: 'Central Bank', to: 'Metro Branch', date: '2026-11-06', status: 'Pending' },
-    { id: 'T004', unit: 'BC009', group: 'AB-', component: 'Plasma', from: 'Metro Branch', to: 'City Branch', date: '2026-11-04', status: 'Completed' }
-  ]);
+  const [transfers, setTransfers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchTransfers = () => {
+    fetch('/api/transfers')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setTransfers(data.map(t => ({
+            id: t.transferId,
+            unit: t.componentId,
+            group: t.bloodType || 'O+',
+            component: t.componentType || 'RBC',
+            from: t.fromFacility,
+            to: t.toFacility,
+            date: t.initiatedAt ? t.initiatedAt.split(' ')[0] : '2026-11-10',
+            status: t.status
+          })));
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching transfers:', err);
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    fetchTransfers();
+  }, []);
 
   const [filter, setFilter] = useState('All');
 
-  const updateStatus = (id, newStatus) => {
-    setTransfers(prev =>
-      prev.map(t => t.id === id ? { ...t, status: newStatus } : t)
-    );
+  const updateStatus = async (id, newStatus) => {
+    if (newStatus === 'Completed') {
+      try {
+        await fetch(`/api/transfers/complete?id=${id}`, { method: 'POST' });
+        fetchTransfers();
+      } catch (err) {
+        console.error('Error completing transfer:', err);
+      }
+    } else {
+      setTransfers(prev =>
+        prev.map(t => t.id === id ? { ...t, status: newStatus } : t)
+      );
+    }
   };
 
   const filteredTransfers = transfers.filter(

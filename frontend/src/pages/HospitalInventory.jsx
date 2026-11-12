@@ -1,20 +1,50 @@
 
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './HospitalInventory.css';
 
 function HospitalInventory() {
   const navigate = useNavigate();
 
-  const bloodStock = [
-    { group: 'A+', units: 85, status: 'Available' },
-    { group: 'A-', units: 25, status: 'Available' },
-    { group: 'B+', units: 70, status: 'Available' },
-    { group: 'B-', units: 8, status: 'Low Stock' },
-    { group: 'O+', units: 110, status: 'Available' },
-    { group: 'O-', units: 5, status: 'Low Stock' },
-    { group: 'AB+', units: 45, status: 'Available' },
-    { group: 'AB-', units: 12, status: 'Low Stock' }
-  ];
+  const [bloodStock, setBloodStock] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/inventory')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          // Aggregate by blood group
+          const map = {};
+          const groups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
+          groups.forEach(g => { map[g] = 0; });
+
+          data.forEach(item => {
+            const grp = item.bloodType;
+            if (map[grp] !== undefined) {
+              map[grp] += item.availableUnits || 0;
+            } else {
+              map[grp] = item.availableUnits || 0;
+            }
+          });
+
+          const formatted = Object.keys(map).map(g => ({
+            group: g,
+            units: map[g],
+            status: map[g] > 10 ? 'Available' : 'Low Stock'
+          }));
+          setBloodStock(formatted);
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to load blood stock:', err);
+        setLoading(false);
+      });
+  }, []);
+
+  const totalAvailable = bloodStock.reduce((acc, curr) => acc + (curr.units || 0), 0);
+  const lowStockCount = bloodStock.filter(b => b.status === 'Low Stock').length;
 
   return (
     <div className="dashboard-layout">
@@ -54,17 +84,17 @@ function HospitalInventory() {
 
         <section className="hi-summary">
           <div className="hi-summary-card">
-            <h2>360</h2>
+            <h2>{loading ? '...' : totalAvailable}</h2>
             <p>Total Available Units</p>
           </div>
 
           <div className="hi-summary-card">
-            <h2>8</h2>
+            <h2>{bloodStock.length}</h2>
             <p>Blood Groups</p>
           </div>
 
           <div className="hi-summary-card">
-            <h2>3</h2>
+            <h2>{loading ? '...' : lowStockCount}</h2>
             <p>Low Stock Groups</p>
           </div>
         </section>

@@ -1,18 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './BloodBankInventory.css';
 
 function BloodBankInventory() {
   const navigate = useNavigate();
 
-  const inventory = [
-    { id: 'BC001', group: 'A+', component: 'Packed RBC', expiry: '2026-11-12', facility: 'Central Bank', status: 'Available' },
-    { id: 'BC002', group: 'O+', component: 'Platelets', expiry: '2026-11-08', facility: 'Central Bank', status: 'Available' },
-    { id: 'BC003', group: 'B+', component: 'Plasma', expiry: '2026-11-20', facility: 'City Branch', status: 'Reserved' },
-    { id: 'BC004', group: 'AB-', component: 'Packed RBC', expiry: '2026-11-25', facility: 'City Branch', status: 'Available' },
-    { id: 'BC005', group: 'O-', component: 'Whole Blood', expiry: '2026-11-06', facility: 'Central Bank', status: 'In Transit' },
-    { id: 'BC006', group: 'A-', component: 'Platelets', expiry: '2026-11-09', facility: 'City Branch', status: 'Available' }
-  ];
+  const [inventory, setInventory] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/inventory')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setInventory(data.map((item, idx) => ({
+            id: `BC-${String(idx + 1).padStart(3, '0')}`,
+            group: item.bloodType,
+            component: item.component,
+            expiry: 'Active',
+            facility: 'Central Facility',
+            units: item.availableUnits,
+            status: item.availableUnits > 5 ? 'Available' : 'Reserved'
+          })));
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error loading inventory:', err);
+        setLoading(false);
+      });
+  }, []);
 
   const [group, setGroup] = useState('All');
   const [component, setComponent] = useState('All');
@@ -21,15 +38,12 @@ function BloodBankInventory() {
   const filteredInventory = inventory
     .filter(item => group === 'All' || item.group === group)
     .filter(item => component === 'All' || item.component === component)
-    .filter(item => status === 'All' || item.status === status)
-    .sort((a, b) => new Date(a.expiry) - new Date(b.expiry));
+    .filter(item => status === 'All' || item.status === status);
 
+  const totalUnits = inventory.reduce((sum, item) => sum + (item.units || 1), 0);
   const available = inventory.filter(item => item.status === 'Available').length;
   const reserved = inventory.filter(item => item.status === 'Reserved').length;
-  const expiring = inventory.filter(item =>
-    item.status === 'Available' &&
-    new Date(item.expiry) <= new Date('2026-11-13')
-  ).length;
+  const expiring = inventory.filter(item => (item.units || 0) < 5).length;
 
   return (
     <div className="bb-layout">
@@ -62,7 +76,7 @@ function BloodBankInventory() {
 
         <section className="bb-stats">
           <div className="bb-stat-box">
-            <h2>{inventory.length}</h2>
+            <h2>{loading ? '...' : totalUnits}</h2>
             <p>Total Units</p>
           </div>
           <div className="bb-stat-box">

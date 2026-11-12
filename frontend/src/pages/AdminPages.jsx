@@ -1,10 +1,12 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getUser, clearUser } from '../utils/auth';
 import './AdminPages.css';
 
 function AdminLayout({ title, active, children }) {
   const navigate = useNavigate();
+  const currentUser = getUser();
 
   const menu = [
     ['Dashboard', '/admin-dashboard'],
@@ -33,7 +35,13 @@ function AdminLayout({ title, active, children }) {
           </div>
         ))}
 
-        <div className="ad-menu ad-logout" onClick={() => navigate('/')}>
+        <div
+          className="ad-menu ad-logout"
+          onClick={() => {
+            clearUser();
+            navigate('/');
+          }}
+        >
           Logout
         </div>
       </aside>
@@ -41,7 +49,7 @@ function AdminLayout({ title, active, children }) {
       <main className="ad-main">
         <div className="ad-header">
           <h1>{title}</h1>
-          <span>Welcome, Admin</span>
+          <span>Welcome, {currentUser?.username || 'Admin'}</span>
         </div>
         {children}
       </main>
@@ -72,6 +80,10 @@ function DataTable({ columns, rows }) {
 
 function ManagementPage({ title, active, columns, initialRows }) {
   const [rows, setRows] = useState(initialRows);
+
+  useEffect(() => {
+    setRows(initialRows);
+  }, [initialRows]);
 
   const toggleStatus = (index) => {
     setRows(previous => previous.map((row, i) => {
@@ -107,19 +119,43 @@ function ManagementPage({ title, active, columns, initialRows }) {
 // 1. ADMIN DASHBOARD
 
 export function AdminDashboard() {
-  const stats = [
-    ['Total Blood Banks', '12'],
-    ['Registered Hospitals', '35'],
-    ['Registered Donors', '2,XXX'],
-    ['Pending Requests', '18']
-  ];
+  const [stats, setStats] = useState([
+    ['Total Blood Banks', '...'],
+    ['Registered Hospitals', '...'],
+    ['Registered Donors', '...'],
+    ['Pending Requests', '...']
+  ]);
+  const [requests, setRequests] = useState([]);
 
-  const requests = [
-    ['R001', 'City Hospital', 'O+', 'Emergency', 'Pending'],
-    ['R002', 'Metro Hospital', 'AB+', 'Normal', 'Approved'],
-    ['R003', 'Central Hospital', 'B-', 'Accident Zone', 'Pending'],
-    ['R004', 'Care Hospital', 'A+', 'Normal', 'Completed']
-  ];
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/facilities').then(r => r.json()).catch(() => []),
+      fetch('/api/donors').then(r => r.json()).catch(() => []),
+      fetch('/api/requests').then(r => r.json()).catch(() => [])
+    ]).then(([facilities, donors, reqs]) => {
+      const bloodBanks = Array.isArray(facilities) ? facilities.filter(f => f.type === 'Blood Bank').length : 0;
+      const hospitals = Array.isArray(facilities) ? facilities.filter(f => f.type === 'Hospital').length : 0;
+      const donorCount = Array.isArray(donors) ? donors.length : 0;
+      const pendingCount = Array.isArray(reqs) ? reqs.filter(r => r.status === 'Pending').length : 0;
+
+      setStats([
+        ['Total Blood Banks', String(bloodBanks)],
+        ['Registered Hospitals', String(hospitals)],
+        ['Registered Donors', String(donorCount)],
+        ['Pending Requests', String(pendingCount)]
+      ]);
+
+      if (Array.isArray(reqs)) {
+        setRequests(reqs.slice(0, 5).map(r => [
+          r.requestId,
+          r.facilityId || 'District Facility',
+          r.bloodType,
+          r.priority,
+          r.status
+        ]));
+      }
+    });
+  }, []);
 
   return (
     <AdminLayout title="Admin Dashboard" active="Dashboard">
@@ -156,16 +192,31 @@ export function AdminDashboard() {
 // 2. BLOOD BANK MANAGEMENT
 
 export function AdminBloodBanks() {
+  const [rows, setRows] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/facilities?type=Blood+Bank')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setRows(data.map(f => [
+            f.facilityId,
+            f.facilityName,
+            f.location,
+            '98765' + f.facilityId.replace(/\D/g, '').padStart(5, '0'),
+            'Active'
+          ]));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <ManagementPage
       title="Blood Bank Management"
       active="Blood Bank Management"
       columns={['Bank ID', 'Blood Bank Name', 'Location', 'Contact', 'Status', 'Action']}
-      initialRows={[
-        ['BB001', 'RedThread Central Bank', 'Dehradun', '9876500001', 'Active'],
-        ['BB002', 'City Blood Centre', 'Dehradun', '9876500002', 'Active'],
-        ['BB003', 'Regional Blood Bank', 'Haridwar', '9876500003', 'Inactive']
-      ]}
+      initialRows={rows}
     />
   );
 }
@@ -173,16 +224,31 @@ export function AdminBloodBanks() {
 // 3. HOSPITAL MANAGEMENT
 
 export function AdminHospitals() {
+  const [rows, setRows] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/facilities?type=Hospital')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setRows(data.map(f => [
+            f.facilityId,
+            f.facilityName,
+            f.location,
+            '98765' + f.facilityId.replace(/\D/g, '').padStart(5, '0'),
+            'Active'
+          ]));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <ManagementPage
       title="Hospital Management"
       active="Hospital Management"
       columns={['Hospital ID', 'Hospital Name', 'Location', 'Contact', 'Status', 'Action']}
-      initialRows={[
-        ['H001', 'City Hospital', 'Dehradun', '9876510001', 'Active'],
-        ['H002', 'Metro Hospital', 'Haridwar', '9876510002', 'Active'],
-        ['H003', 'Care Hospital', 'Rishikesh', '9876510003', 'Inactive']
-      ]}
+      initialRows={rows}
     />
   );
 }
@@ -190,17 +256,31 @@ export function AdminHospitals() {
 // 4. DONOR MANAGEMENT
 
 export function AdminDonors() {
+  const [rows, setRows] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/donors')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setRows(data.map(d => [
+            d.id,
+            d.name || 'Anonymous Donor',
+            d.bloodType,
+            String(d.karmaPoints || 0),
+            d.eligibility || 'Active'
+          ]));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <ManagementPage
       title="Donor Management"
       active="Donor Management"
       columns={['Donor ID', 'Donor Name', 'Blood Group', 'Karma Points', 'Status', 'Action']}
-      initialRows={[
-        ['D001', 'Mansi', 'O+', '250', 'Active'],
-        ['D002', 'Rahul', 'B+', '180', 'Active'],
-        ['D003', 'Priya', 'AB+', '320', 'Inactive'],
-        ['D004', 'Aman', 'O-', '100', 'Active']
-      ]}
+      initialRows={rows}
     />
   );
 }
@@ -208,16 +288,22 @@ export function AdminDonors() {
 // 5. BLOOD INVENTORY OVERVIEW
 
 export function AdminInventory() {
-  const inventory = [
-    ['O+', '45', 'Available'],
-    ['O-', '20', 'Available'],
-    ['A+', '60', 'Available'],
-    ['A-', '15', 'Low Stock'],
-    ['B+', '55', 'Available'],
-    ['B-', '18', 'Low Stock'],
-    ['AB+', '25', 'Available'],
-    ['AB-', '12', 'Low Stock']
-  ];
+  const [inventory, setInventory] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/inventory')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setInventory(data.map(item => [
+            `${item.bloodType} (${item.component})`,
+            String(item.availableUnits),
+            item.availableUnits > 5 ? 'Available' : 'Low Stock'
+          ]));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <AdminLayout title="Blood Inventory Overview" active="Blood Inventory Overview">
@@ -235,13 +321,24 @@ export function AdminInventory() {
 // 6. REQUEST MONITORING
 
 export function AdminRequests() {
-  const requests = [
-    ['R001', 'City Hospital', 'O+', 'Emergency', 'Pending'],
-    ['R002', 'Metro Hospital', 'AB+', 'Normal', 'Approved'],
-    ['R003', 'Central Hospital', 'B-', 'Accident Zone', 'Pending'],
-    ['R004', 'Care Hospital', 'A+', 'Normal', 'Completed'],
-    ['R005', 'District Hospital', 'O-', 'Rare Blood Group', 'Pending']
-  ];
+  const [requests, setRequests] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/requests')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setRequests(data.map(r => [
+            r.requestId,
+            r.facilityId || 'District Facility',
+            r.bloodType,
+            r.priority,
+            r.status
+          ]));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <AdminLayout title="Request Monitoring" active="Request Monitoring">

@@ -1,21 +1,50 @@
 
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getUser, clearUser } from '../utils/auth';
 import './Dashboard.css';
 
 function Dashboard() {
   const navigate = useNavigate();
+  const currentUser = getUser();
+
+  const [availableUnits, setAvailableUnits] = useState(0);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/inventory').then(r => r.json()).catch(() => []),
+      fetch('/api/requests').then(r => r.json()).catch(() => [])
+    ]).then(([invData, reqData]) => {
+      if (Array.isArray(invData)) {
+        const total = invData.reduce((sum, item) => sum + (item.availableUnits || 0), 0);
+        setAvailableUnits(total);
+      }
+      if (Array.isArray(reqData)) {
+        setRequests(reqData.slice(0, 5).map(r => ({
+          id: r.requestId,
+          blood: r.bloodType,
+          units: r.quantity,
+          status: r.status
+        })));
+      }
+      setLoading(false);
+    }).catch(err => {
+      console.error('Error fetching dashboard data:', err);
+      setLoading(false);
+    });
+  }, []);
+
+  const pendingCount = requests.filter(r => r.status === 'Pending').length;
+  const approvedCount = requests.filter(r => r.status === 'Allocated' || r.status === 'Approved').length;
+  const urgentCount = requests.filter(r => r.status === 'Pending').length;
 
   const stats = [
-    { title: 'Available Units', value: '120' },
-    { title: 'Pending Requests', value: '08' },
-    { title: 'Approved Requests', value: '15' },
-    { title: 'Urgent Requests', value: '03' }
-  ];
-
-  const requests = [
-    { id: 'R001', blood: 'O+', units: 2, status: 'Pending' },
-    { id: 'R002', blood: 'B+', units: 3, status: 'Approved' },
-    { id: 'R003', blood: 'AB-', units: 1, status: 'Urgent' }
+    { title: 'Available Units', value: loading ? '...' : String(availableUnits) },
+    { title: 'Pending Requests', value: loading ? '...' : String(pendingCount) },
+    { title: 'Approved Requests', value: loading ? '...' : String(approvedCount) },
+    { title: 'Urgent Requests', value: loading ? '...' : String(urgentCount) }
   ];
 
   return (
@@ -41,7 +70,10 @@ function Dashboard() {
 
         <div
           className="menu-item logout"
-          onClick={() => navigate('/')}
+          onClick={() => {
+            clearUser();
+            navigate('/');
+          }}
         >
           Logout
         </div>
@@ -52,9 +84,9 @@ function Dashboard() {
         <header className="dashboard-header">
           <div>
             <h1>Hospital Dashboard</h1>
-            <p>Welcome back, Hospital Admin</p>
+            <p>Welcome back, {currentUser?.username || 'Hospital Admin'}</p>
           </div>
-          <div className="admin-label">Hospital Admin</div>
+          <div className="admin-label">{currentUser?.role || 'Hospital Admin'}</div>
         </header>
 
         <section className="stats-grid">

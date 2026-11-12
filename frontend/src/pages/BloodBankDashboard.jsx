@@ -1,31 +1,70 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getUser, clearUser } from '../utils/auth';
 import './BloodBankDashboard.css';
 
 function BloodBankDashboard() {
   const navigate = useNavigate();
+  const currentUser = getUser();
+
+  const [bloodStock, setBloodStock] = useState([
+    { group: 'A+', units: 0 },
+    { group: 'A-', units: 0 },
+    { group: 'B+', units: 0 },
+    { group: 'B-', units: 0 },
+    { group: 'O+', units: 0 },
+    { group: 'O-', units: 0 },
+    { group: 'AB+', units: 0 },
+    { group: 'AB-', units: 0 }
+  ]);
+  const [requests, setRequests] = useState([]);
+  const [alertsCount, setAlertsCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/inventory').then(r => r.json()).catch(() => []),
+      fetch('/api/requests').then(r => r.json()).catch(() => []),
+      fetch('/api/alerts').then(r => r.json()).catch(() => [])
+    ]).then(([invData, reqData, alertData]) => {
+      if (Array.isArray(invData)) {
+        const counts = { 'A+': 0, 'A-': 0, 'B+': 0, 'B-': 0, 'O+': 0, 'O-': 0, 'AB+': 0, 'AB-': 0 };
+        invData.forEach(item => {
+          if (counts[item.bloodType] !== undefined) {
+            counts[item.bloodType] += item.availableUnits || 0;
+          }
+        });
+        setBloodStock(Object.keys(counts).map(g => ({ group: g, units: counts[g] })));
+      }
+
+      if (Array.isArray(reqData)) {
+        setRequests(reqData.slice(0, 5).map(r => ({
+          id: r.requestId,
+          hospital: r.facilityId || 'District Facility',
+          group: r.bloodType,
+          units: r.quantity
+        })));
+      }
+
+      if (Array.isArray(alertData)) {
+        setAlertsCount(alertData.length);
+      }
+
+      setLoading(false);
+    }).catch(err => {
+      console.error('Error fetching dashboard data:', err);
+      setLoading(false);
+    });
+  }, []);
+
+  const totalUnits = bloodStock.reduce((acc, curr) => acc + curr.units, 0);
+  const pendingRequests = requests.length;
 
   const stats = [
-    { title: 'Total Blood Units', value: '450' },
-    { title: "Today's Donations", value: '32' },
-    { title: 'Pending Requests', value: '18' },
-    { title: 'Low Stock Alerts', value: '12' }
-  ];
-
-  const bloodStock = [
-    { group: 'A+', units: 85 },
-    { group: 'A-', units: 25 },
-    { group: 'B+', units: 70 },
-    { group: 'B-', units: 30 },
-    { group: 'O+', units: 110 },
-    { group: 'O-', units: 20 },
-    { group: 'AB+', units: 45 },
-    { group: 'AB-', units: 12 }
-  ];
-
-  const requests = [
-    { id: 'R001', hospital: 'City Hospital', group: 'O+', units: 2 },
-    { id: 'R002', hospital: 'Care Hospital', group: 'B+', units: 3 },
-    { id: 'R003', hospital: 'Civil Hospital', group: 'AB-', units: 1 }
+    { title: 'Total Blood Units', value: loading ? '...' : String(totalUnits) },
+    { title: "Today's Donations", value: 'Active' },
+    { title: 'Pending Requests', value: loading ? '...' : String(pendingRequests) },
+    { title: 'System Alerts', value: loading ? '...' : String(alertsCount) }
   ];
 
   return (
@@ -73,7 +112,13 @@ function BloodBankDashboard() {
           </div>
         </nav>
 
-        <div className="bb-menu bb-logout" onClick={() => navigate('/')}>
+        <div
+          className="bb-menu bb-logout"
+          onClick={() => {
+            clearUser();
+            navigate('/');
+          }}
+        >
           Logout
         </div>
       </aside>
@@ -82,9 +127,9 @@ function BloodBankDashboard() {
         <header className="bb-header">
           <div>
             <h1>Blood Bank Dashboard</h1>
-            <p>Welcome back, Blood Bank Admin</p>
+            <p>Welcome back, {currentUser?.username || 'Blood Bank Admin'}</p>
           </div>
-          <span className="bb-admin">Blood Bank Admin</span>
+          <span className="bb-admin">{currentUser?.role || 'Blood Bank Admin'}</span>
         </header>
 
         <section className="bb-stats">

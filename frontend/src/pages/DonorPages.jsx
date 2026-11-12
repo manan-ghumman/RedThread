@@ -1,11 +1,13 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getUser, clearUser } from '../utils/auth';
 import './DonorDashboard.css';
 import './DonorPages.css';
 
 function DonorLayout({ title, active, children }) {
   const navigate = useNavigate();
+  const currentUser = getUser();
 
   const menu = [
     ['Dashboard', '/donor-dashboard'],
@@ -35,7 +37,13 @@ function DonorLayout({ title, active, children }) {
           </div>
         ))}
 
-        <div className="dp-menu dp-logout" onClick={() => navigate('/')}>
+        <div
+          className="dp-menu dp-logout"
+          onClick={() => {
+            clearUser();
+            navigate('/');
+          }}
+        >
           Logout
         </div>
       </aside>
@@ -43,7 +51,7 @@ function DonorLayout({ title, active, children }) {
       <main className="dp-main">
         <div className="dp-header">
           <h1>{title}</h1>
-          <span>Welcome, Mansi</span>
+          <span>Welcome, {currentUser?.username || 'Donor'}</span>
         </div>
         {children}
       </main>
@@ -192,11 +200,23 @@ export function EligibilityStatus() {
 // 4. NEARBY BLOOD BANKS
 
 export function NearbyBloodBanks() {
-  const banks = [
-    { id: 1, name: 'RedThread Central Blood Bank', location: 'Dehradun', phone: '0135-0000001' },
-    { id: 2, name: 'City Blood Centre', location: 'Dehradun', phone: '0135-0000002' },
-    { id: 3, name: 'Regional Blood Bank', location: 'Dehradun', phone: '0135-0000003' }
-  ];
+  const [banks, setBanks] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/facilities?type=Blood+Bank')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setBanks(data.map(b => ({
+            id: b.facilityId,
+            name: b.facilityName,
+            location: b.location,
+            phone: '0135-' + b.facilityId.replace(/\D/g, '').padStart(6, '0')
+          })));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <DonorLayout title="Nearby Blood Banks" active="Nearby Blood Banks">

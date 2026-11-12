@@ -1,12 +1,14 @@
 
 import { useNavigate } from 'react-router-dom';
+import { getUser, clearUser } from '../utils/auth';
 import './DonorDashboard.css';
 
 function DonorDashboard() {
   const navigate = useNavigate();
+  const currentUser = getUser();
 
   const donor = {
-    name: 'Mansi',
+    name: currentUser?.username || 'Mansi',
     karmaPoints: 250,
     donations: 2,
     eligibility: 'Eligible',
@@ -35,7 +37,15 @@ function DonorDashboard() {
         <div className="dp-menu" onClick={() => navigate('/donor-notifications')}>Notifications</div>
         <div className="dp-menu" onClick={() => navigate('/donor-settings')}>Settings</div>
 
-        <div className="dp-menu dp-logout" onClick={() => navigate('/')}>Logout</div>
+        <div
+          className="dp-menu dp-logout"
+          onClick={() => {
+            clearUser();
+            navigate('/');
+          }}
+        >
+          Logout
+        </div>
       </aside>
 
       <main className="dp-main">

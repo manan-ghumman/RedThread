@@ -1,19 +1,36 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './DonorManagement.css';
 
 function DonorManagement() {
   const navigate = useNavigate();
 
-  const donors = [
-    { id: 'D001', name: 'Rahul Sharma', group: 'O+', phone: '98765XXXXX', lastDonation: '2026-08-10', status: 'Eligible' },
-    { id: 'D002', name: 'Priya Verma', group: 'A+', phone: '98765XXXXX', lastDonation: '2026-09-15', status: 'Deferred' },
-    { id: 'D003', name: 'Aman Singh', group: 'B+', phone: '98765XXXXX', lastDonation: '2026-10-20', status: 'Eligible' },
-    { id: 'D004', name: 'Neha Gupta', group: 'AB+', phone: '98765XXXXX', lastDonation: '2026-07-12', status: 'Eligible' },
-    { id: 'D005', name: 'Karan Mehta', group: 'O-', phone: '98765XXXXX', lastDonation: '2026-10-25', status: 'Deferred' },
-    { id: 'D006', name: 'Simran Kaur', group: 'A-', phone: '98765XXXXX', lastDonation: '2026-06-18', status: 'Eligible' }
-  ];
+  const [donors, setDonors] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/donors')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setDonors(data.map(d => ({
+            id: d.id,
+            name: d.name || 'Anonymous Donor',
+            group: d.bloodType,
+            phone: 'Active Record',
+            lastDonation: 'Recorded',
+            status: d.eligibility || 'Eligible',
+            karmaPoints: d.karmaPoints || 0
+          })));
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching donors:', err);
+        setLoading(false);
+      });
+  }, []);
 
   const [search, setSearch] = useState('');
   const [bloodGroup, setBloodGroup] = useState('All');

@@ -21,6 +21,7 @@ import com.example.modules.FacilityModule;
 import com.example.modules.InventoryModule;
 import com.example.modules.PatientModule;
 import com.example.modules.TransferModule;
+import com.example.server.ApiServer;
 
 public class App {
 
@@ -28,17 +29,17 @@ public class App {
 
     private static final String DB_URL = resolveSetting(
             "REDTHREAD_DB_URL",
-            "jdbc:mysql://sql12.freesqldatabase.com:3306/sql12839033?useSSL=true&serverTimezone=UTC"
+            "jdbc:mysql://localhost:3306/redthread_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
     );
 
     private static final String DB_USER = resolveSetting(
             "REDTHREAD_DB_USER",
-            "sql12839033"
+            "root"
     );
 
     private static final String DB_PASSWORD = resolveSetting(
             "REDTHREAD_DB_PASSWORD",
-            ""
+            "root"
     );
 
     static String resolveSetting(String key, String defaultValue) {
@@ -124,8 +125,16 @@ public class App {
             conn.setAutoCommit(true);
 
             System.out.println(
-                    "\n[INFO] Connected successfully to MySQL database 'sql12839033'."
+                    "\n[INFO] Connected successfully to MySQL database: " + conn.getCatalog()
             );
+
+            // Start REST API server
+            try {
+                ApiServer.start(conn);
+                System.out.println("[INFO] REST API server listening at http://localhost:8080/api");
+            } catch (Exception e) {
+                System.err.println("[WARN] Could not start REST API server: " + e.getMessage());
+            }
 
             // ===== LOGIN SCREEN =====
             String role = loginScreen(scanner);
