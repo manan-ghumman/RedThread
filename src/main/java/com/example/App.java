@@ -139,6 +139,10 @@ public class App {
             // ===== LOGIN SCREEN =====
             String role = loginScreen(scanner);
             if (role == null) {
+                System.out.println("[INFO] Running in headless/server mode. Listening on port 8080. Press Ctrl+C to stop.");
+                try {
+                    Thread.currentThread().join();
+                } catch (InterruptedException ignored) {}
                 return;
             }
 
@@ -155,7 +159,7 @@ public class App {
                 if (isAdmin) {
                     System.out.print("Select an option [0-11]: ");
                 } else {
-                    System.out.print("Select an option [0-5]: ");
+                    System.out.print("Select an option [0-4]: ");
                 }
 
                 if (!scanner.hasNextLine()) {
@@ -177,7 +181,7 @@ public class App {
                 }
 
                 // Facility users can only access options 0-4
-                if (!isAdmin && choice > 5) {
+                if (!isAdmin && choice > 4) {
                     System.out.println(
                             "[ACCESS DENIED] This option is only available in Admin mode."
                     );
@@ -304,21 +308,33 @@ public class App {
     private static String loginScreen(Scanner scanner) {
 
         System.out.println("\n================ LOGIN ================");
-        System.out.println("  1. Facility");
+        System.out.println("  1. Facility Mode");
+        System.out.println("  2. Admin Mode");
         System.out.println("  0. Exit");
         System.out.println("=======================================");
-        System.out.print("Select role: ");
+        System.out.print("Select option [0-2]: ");
 
         if (!scanner.hasNextLine()) {
-            System.out.println("\n[INFO] No input received. Closing RedThread.");
             return null;
         }
 
         String input = scanner.nextLine().trim();
 
-        if ("4dmin".equals(input)) {
-            System.out.println("\n[INFO] Admin access granted.");
-            return "ADMIN";
+        if ("2".equals(input) || "4dmin".equalsIgnoreCase(input) || "admin".equalsIgnoreCase(input)) {
+            System.out.print("Enter admin passcode: ");
+            if (!scanner.hasNextLine()) return null;
+            String pass = scanner.nextLine().trim();
+            if ("4dmin".equals(pass) || "admin123".equals(pass) || "admin".equalsIgnoreCase(pass)) {
+                System.out.println("\n[INFO] Admin access granted.");
+                return "ADMIN";
+            } else {
+                System.out.println("[ERROR] Invalid admin credentials.");
+                return null;
+            }
+        }
+
+        if ("1".equals(input) || "facility".equalsIgnoreCase(input)) {
+            return "FACILITY";
         }
 
         if ("0".equals(input)) {
@@ -326,7 +342,7 @@ public class App {
             return null;
         }
 
-        // Default: Facility mode
+        System.out.println("[WARNING] Invalid choice. Entering default Facility mode.");
         return "FACILITY";
     }
 
@@ -339,13 +355,13 @@ public class App {
             System.out.println("\n========== FACILITY MENU ==========");
         }
 
-            System.out.println("1. View Available Blood Inventory");
-            System.out.println("2. Register a New Donor");
-            System.out.println("3. Record a Blood Donation");
-            System.out.println("4. Raise a Blood Request");
-                 System.out.println("5. Allocate Blood");
+        System.out.println("1. View Available Blood Inventory");
+        System.out.println("2. Register a New Donor");
+        System.out.println("3. Record a Blood Donation");
+        System.out.println("4. Raise a Blood Request");
 
         if (isAdmin) {
+            System.out.println("5. Allocate Blood (OS Priority Queue)");
             System.out.println("6. View System Alerts");
             System.out.println("7. Patient Management");
             System.out.println("8. Facility Management");
@@ -355,7 +371,6 @@ public class App {
         }
 
         System.out.println("0. Exit");
-
         System.out.println("===================================");
     }
 }

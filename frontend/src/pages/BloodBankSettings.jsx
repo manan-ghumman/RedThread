@@ -1,10 +1,11 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getUser, clearUser } from '../utils/auth';
 import './BloodBankSettings.css';
 
 function BloodBankSettings() {
   const navigate = useNavigate();
+  const currentUser = getUser();
 
   const [bankName, setBankName] = useState('RedThread Central Blood Bank');
   const [email, setEmail] = useState('central@redthread.com');
@@ -16,9 +17,47 @@ function BloodBankSettings() {
   const [expiryAlerts, setExpiryAlerts] = useState(true);
   const [transferAlerts, setTransferAlerts] = useState(true);
 
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(data => {
+        if (data.bb_name) setBankName(data.bb_name);
+        if (data.bb_email) setEmail(data.bb_email);
+        if (data.bb_phone) setPhone(data.bb_phone);
+        if (data.bb_address) setAddress(data.bb_address);
+        if (data.bb_email_alerts !== undefined) setEmailAlerts(data.bb_email_alerts === 'true');
+        if (data.bb_request_alerts !== undefined) setRequestAlerts(data.bb_request_alerts === 'true');
+        if (data.bb_expiry_alerts !== undefined) setExpiryAlerts(data.bb_expiry_alerts === 'true');
+        if (data.bb_transfer_alerts !== undefined) setTransferAlerts(data.bb_transfer_alerts === 'true');
+      })
+      .catch(() => {});
+  }, []);
+
   const handleSave = (e) => {
     e.preventDefault();
-    alert('Settings saved successfully! (Demo only — not saved to database.)');
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bb_name: bankName,
+        bb_email: email,
+        bb_phone: phone,
+        bb_address: address,
+        bb_email_alerts: emailAlerts ? 'true' : 'false',
+        bb_request_alerts: requestAlerts ? 'true' : 'false',
+        bb_expiry_alerts: expiryAlerts ? 'true' : 'false',
+        bb_transfer_alerts: transferAlerts ? 'true' : 'false'
+      })
+    })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) {
+          alert('Settings saved successfully to database!');
+        } else {
+          alert('Failed to save settings: ' + (res.error || ''));
+        }
+      })
+      .catch(err => alert('Network error: ' + err.message));
   };
 
   return (
@@ -36,7 +75,10 @@ function BloodBankSettings() {
           <div className="bb-menu" onClick={() => navigate('/blood-bank-reports')}>Reports</div>
           <div className="bb-menu active">Settings</div>
         </nav>
-        <div className="bb-menu bb-logout" onClick={() => navigate('/')}>Logout</div>
+        <div className="bb-menu bb-logout" onClick={() => {
+          clearUser();
+          navigate('/');
+        }}>Logout</div>
       </aside>
 
       <main className="bb-main">
@@ -45,7 +87,7 @@ function BloodBankSettings() {
             <h1>Blood Bank Settings</h1>
             <p>Manage your blood bank information and preferences</p>
           </div>
-          <span className="bb-admin">Blood Bank Admin</span>
+          <span className="bb-admin">Logged in as: {currentUser?.username || 'Blood Bank'}</span>
         </header>
 
         <form className="bb-settings-form" onSubmit={handleSave}>
@@ -55,7 +97,7 @@ function BloodBankSettings() {
             <div className="bb-settings-grid">
               <div className="bb-settings-field">
                 <label>Blood Bank ID</label>
-                <input value="BB001" readOnly />
+                <input value={currentUser?.entityId || "F005"} readOnly />
               </div>
 
               <div className="bb-settings-field">

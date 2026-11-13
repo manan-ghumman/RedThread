@@ -6,6 +6,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -25,15 +26,22 @@ public class AlertHandler implements HttpHandler {
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
-        if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
-            ApiServer.sendJson(exchange, 405, JsonUtil.errorJson("Method not allowed"));
-            return;
-        }
+        String method = exchange.getRequestMethod();
 
+        if ("GET".equalsIgnoreCase(method)) {
+            handleGet(exchange);
+        } else if ("PUT".equalsIgnoreCase(method) || "POST".equalsIgnoreCase(method)) {
+            handleMarkRead(exchange);
+        } else {
+            ApiServer.sendJson(exchange, 405, JsonUtil.errorJson("Method not allowed"));
+        }
+    }
+
+    private void handleGet(HttpExchange exchange) throws IOException {
         String sql = "SELECT AlertID, FacilityID, ComponentID, AlertType, Message, CreatedAt " +
                      "FROM ALERT " +
                      "WHERE IsRead = FALSE " +
-                     "ORDER BY CreatedAt DESC LIMIT 10";
+                     "ORDER BY CreatedAt DESC LIMIT 15";
 
         try (PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -56,5 +64,47 @@ public class AlertHandler implements HttpHandler {
             ApiServer.sendJson(exchange, 500, JsonUtil.errorJson("Failed to fetch alerts: " + e.getMessage()));
         }
     }
-}
 
+    private void handleMarkRead(HttpExchange exchange) throws IOException {
+        String query = exchange.getRequestURI().getQuery();
+        String alertId = null;
+
+        if (query != null && !query.isEmpty()) {
+            for (String param : query.split("&")) {
+                String[] pair = param.split("=", 2);
+                if (pair.length == 2 && "id".equalsIgnoreCase(pair[0])) {
+                    alertId = java.net.URLDecoder.decode(pair[1], StandardCharsets.UTF_8);
+                }
+            }
+        }
+
+        if (alertId == null) {
+            String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            Map<String, String> data = JsonUtil.parseJsonBody(body);
+            alertId = data.get("alertId");
+        }
+
+        String sql;
+        if (alertId != null && !alertId.trim().isEmpty() && !"all".equalsIgnoreCase(alertId)) {
+            sql = "UPDATE ALERT SET IsRead = TRUE WHERE AlertID = ?";
+        } else {
+            sql = "UPDATE ALERT SET IsRead = TRUE WHERE IsRead = FALSE";
+        }
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            if (alertId != null && !alertId.trim().isEmpty() && !"all".equalsIgnoreCase(alertId)) {
+                ps.setInt(1, Integer.parseInt(alertId.trim()));
+            }
+            int updated = ps.executeUpdate();
+
+            Map<String, String> resp = new LinkedHashMap<>();
+            resp.put("success", "true");
+            resp.put("updatedCount", String.valueOf(updated));
+            resp.put("message", JsonUtil.quoted("Alert(s) marked as read"));
+            ApiServer.sendJson(exchange, 200, JsonUtil.jsonObject(resp));
+
+        } catch (Exception e) {
+            ApiServer.sendJson(exchange, 500, JsonUtil.errorJson("Failed to update alert: " + e.getMessage()));
+        }
+    }
+}

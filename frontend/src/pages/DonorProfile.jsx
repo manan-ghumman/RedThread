@@ -1,20 +1,49 @@
-
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getUser, clearUser } from '../utils/auth';
 import './DonorProfile.css';
 
 function DonorProfile() {
   const navigate = useNavigate();
+  const currentUser = getUser();
 
-  const donor = {
-    id: 'D001',
-    name: 'Mansi',
-    email: 'mansi@example.com',
+  const [donor, setDonor] = useState({
+    id: currentUser?.entityId || 'RT0001',
+    name: currentUser?.username || 'Ananya Pant',
+    email: currentUser?.email || 'ananya.pant@redthread.org',
     phone: '9876543210',
     bloodGroup: 'O+',
-    age: 21,
+    age: 24,
     gender: 'Female',
     address: 'Dehradun, Uttarakhand'
-  };
+  });
+
+  useEffect(() => {
+    fetch('/api/donors')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const match = data.find(d => 
+            (currentUser?.entityId && d.donorId === currentUser.entityId) ||
+            (currentUser?.username && d.name?.toLowerCase().includes(currentUser.username.toLowerCase()))
+          ) || data[0];
+
+          if (match) {
+            setDonor({
+              id: match.donorId || currentUser?.entityId || 'RT0001',
+              name: match.name || currentUser?.username || 'Donor',
+              email: currentUser?.email || 'donor@redthread.org',
+              phone: match.phone || '9876543210',
+              bloodGroup: match.bloodGroup || 'O+',
+              age: match.age || 24,
+              gender: match.gender || 'Female',
+              address: match.address || 'Dehradun, Uttarakhand'
+            });
+          }
+        }
+      })
+      .catch(() => {});
+  }, [currentUser]);
 
   return (
     <div className="dp-layout">
@@ -31,7 +60,10 @@ function DonorProfile() {
         <div className="dp-menu" onClick={() => navigate('/donor-appointments')}>Donation Appointments</div>
         <div className="dp-menu" onClick={() => navigate('/donor-notifications')}>Notifications</div>
         <div className="dp-menu" onClick={() => navigate('/donor-settings')}>Settings</div>
-        <div className="dp-menu dp-logout" onClick={() => navigate('/')}>Logout</div>
+        <div className="dp-menu dp-logout" onClick={() => {
+          clearUser();
+          navigate('/');
+        }}>Logout</div>
       </aside>
 
       <main className="dp-main">
@@ -82,9 +114,9 @@ function DonorProfile() {
 
           <button
             className="profile-edit-button"
-            onClick={() => alert('Profile editing will be connected later.')}
+            onClick={() => navigate('/donor-settings')}
           >
-            Edit Profile
+            Edit Settings
           </button>
         </section>
       </main>

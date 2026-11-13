@@ -6,11 +6,15 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class DonationHandler implements HttpHandler {
@@ -23,11 +27,72 @@ public class DonationHandler implements HttpHandler {
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
-        if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+        String method = exchange.getRequestMethod();
+        if ("GET".equalsIgnoreCase(method)) {
+            handleGet(exchange);
+        } else if ("POST".equalsIgnoreCase(method)) {
+            handlePost(exchange);
+        } else {
             ApiServer.sendJson(exchange, 405, JsonUtil.errorJson("Method not allowed"));
-            return;
+        }
+    }
+
+    private void handleGet(HttpExchange exchange) throws IOException {
+        String query = exchange.getRequestURI().getQuery();
+        String donorId = null;
+
+        if (query != null && !query.isEmpty()) {
+            for (String param : query.split("&")) {
+                String[] pair = param.split("=", 2);
+                if (pair.length == 2 && "donorId".equalsIgnoreCase(pair[0])) {
+                    donorId = java.net.URLDecoder.decode(pair[1], StandardCharsets.UTF_8);
+                }
+            }
         }
 
+        String sql;
+        if (donorId != null && !donorId.trim().isEmpty()) {
+            sql = "SELECT d.DonationID, d.RedThreadID, d.FacilityID, f.FacilityName, " +
+                  "d.DonationDate, d.Volume_mL, dn.BloodGroup " +
+                  "FROM DONATION d " +
+                  "JOIN FACILITY f ON d.FacilityID = f.FacilityID " +
+                  "JOIN DONOR dn ON d.RedThreadID = dn.RedThreadID " +
+                  "WHERE d.RedThreadID = ? ORDER BY d.DonationDate DESC";
+        } else {
+            sql = "SELECT d.DonationID, d.RedThreadID, d.FacilityID, f.FacilityName, " +
+                  "d.DonationDate, d.Volume_mL, dn.BloodGroup " +
+                  "FROM DONATION d " +
+                  "JOIN FACILITY f ON d.FacilityID = f.FacilityID " +
+                  "JOIN DONOR dn ON d.RedThreadID = dn.RedThreadID " +
+                  "ORDER BY d.DonationDate DESC LIMIT 50";
+        }
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            if (donorId != null && !donorId.trim().isEmpty()) {
+                ps.setString(1, donorId.trim());
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                List<String> list = new ArrayList<>();
+                while (rs.next()) {
+                    Map<String, String> m = new LinkedHashMap<>();
+                    m.put("donationId", JsonUtil.quoted(rs.getString("DonationID")));
+                    m.put("redThreadId", JsonUtil.quoted(rs.getString("RedThreadID")));
+                    m.put("facilityId", JsonUtil.quoted(rs.getString("FacilityID")));
+                    m.put("facilityName", JsonUtil.quoted(rs.getString("FacilityName")));
+                    m.put("donationDate", JsonUtil.quoted(rs.getDate("DonationDate").toString()));
+                    m.put("volume", String.valueOf(rs.getInt("Volume_mL")));
+                    m.put("bloodGroup", JsonUtil.quoted(rs.getString("BloodGroup")));
+                    list.add(JsonUtil.jsonObject(m));
+                }
+                ApiServer.sendJson(exchange, 200, JsonUtil.jsonArray(list));
+            }
+        } catch (SQLException e) {
+            ApiServer.sendJson(exchange, 500, JsonUtil.errorJson("Failed to fetch donations: " + e.getMessage()));
+        }
+    }
+
+    private void handlePost(HttpExchange exchange) throws IOException {
         String body = ApiServer.readBody(exchange);
         Map<String, String> data = JsonUtil.parseJsonBody(body);
 
@@ -105,4 +170,3 @@ public class DonationHandler implements HttpHandler {
         }
     }
 }
-

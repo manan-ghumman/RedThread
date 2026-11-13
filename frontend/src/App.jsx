@@ -34,6 +34,7 @@ import {
   AdminHospitals,
   AdminDonors,
   AdminInventory,
+  AdminDistribution,
   AdminRequests,
   AdminReports,
   AdminSettings
@@ -101,6 +102,8 @@ function App() {
         <Route path="/admin-donors" element={<AdminDonors />} />
         
         <Route path="/admin-inventory" element={<AdminInventory />} />
+        
+        <Route path="/admin-distribution" element={<AdminDistribution />} />
         
         <Route path="/admin-requests" element={<AdminRequests />} />
         

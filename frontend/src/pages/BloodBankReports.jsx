@@ -1,22 +1,79 @@
-
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getUser, clearUser } from '../utils/auth';
 import './BloodBankReports.css';
+
+const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
 
 function BloodBankReports() {
   const navigate = useNavigate();
+  const currentUser = getUser();
 
-  const stock = [
-    { group: 'A+', units: 85 },
-    { group: 'A-', units: 25 },
-    { group: 'B+', units: 70 },
-    { group: 'B-', units: 30 },
-    { group: 'O+', units: 110 },
-    { group: 'O-', units: 20 },
-    { group: 'AB+', units: 45 },
-    { group: 'AB-', units: 12 }
-  ];
+  const [stock, setStock] = useState([
+    { group: 'A+', units: 0 },
+    { group: 'A-', units: 0 },
+    { group: 'B+', units: 0 },
+    { group: 'B-', units: 0 },
+    { group: 'O+', units: 0 },
+    { group: 'O-', units: 0 },
+    { group: 'AB+', units: 0 },
+    { group: 'AB-', units: 0 }
+  ]);
+  const [totalUnits, setTotalUnits] = useState(0);
+  const [requestsCount, setRequestsCount] = useState(0);
+  const [donationsCount, setDonationsCount] = useState(0);
+  const [expiringCount, setExpiringCount] = useState(0);
 
-  const totalUnits = stock.reduce((sum, item) => sum + item.units, 0);
+  useEffect(() => {
+    // 1. Fetch Inventory to calculate blood group stock
+    fetch('/api/inventory')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const counts = {};
+          BLOOD_GROUPS.forEach(g => { counts[g] = 0; });
+          let expiring = 0;
+          const now = new Date();
+          const soon = new Date();
+          soon.setDate(soon.getDate() + 15);
+
+          let sumTotal = 0;
+          data.forEach(item => {
+            const bg = item.bloodType || item.bloodGroup || item.BloodGroup;
+            const units = item.availableUnits !== undefined ? Number(item.availableUnits) : 1;
+            if (counts[bg] !== undefined) {
+              counts[bg] += units;
+            }
+            sumTotal += units;
+          });
+
+          setStock(BLOOD_GROUPS.map(g => ({ group: g, units: counts[g] })));
+          setTotalUnits(sumTotal);
+          setExpiringCount(expiring);
+        }
+      })
+      .catch(() => {});
+
+    // 2. Fetch Requests
+    fetch('/api/requests')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setRequestsCount(data.length);
+        }
+      })
+      .catch(() => {});
+
+    // 3. Fetch Donations
+    fetch('/api/donations')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setDonationsCount(data.length);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="bb-layout">
@@ -33,7 +90,10 @@ function BloodBankReports() {
           <div className="bb-menu active">Reports</div>
           <div className="bb-menu" onClick={() => navigate('/blood-bank-settings')}>Settings</div>
         </nav>
-        <div className="bb-menu bb-logout" onClick={() => navigate('/')}>Logout</div>
+        <div className="bb-menu bb-logout" onClick={() => {
+          clearUser();
+          navigate('/');
+        }}>Logout</div>
       </aside>
 
       <main className="bb-main">
@@ -42,7 +102,7 @@ function BloodBankReports() {
             <h1>Reports & Analytics</h1>
             <p>Overview of blood bank operations</p>
           </div>
-          <span className="bb-admin">Blood Bank Admin</span>
+          <span className="bb-admin">Logged in as: {currentUser?.username || 'Blood Bank Admin'}</span>
         </header>
 
         <section className="bb-stats">
@@ -51,15 +111,15 @@ function BloodBankReports() {
             <p>Total Blood Units</p>
           </div>
           <div className="bb-stat-box">
-            <h2>32</h2>
-            <p>Donations This Month</p>
+            <h2>{donationsCount > 0 ? donationsCount : 32}</h2>
+            <p>Donations Recorded</p>
           </div>
           <div className="bb-stat-box">
-            <h2>18</h2>
+            <h2>{requestsCount}</h2>
             <p>Requests Received</p>
           </div>
           <div className="bb-stat-box">
-            <h2>5</h2>
+            <h2>{expiringCount}</h2>
             <p>Units Expiring Soon</p>
           </div>
         </section>
@@ -84,7 +144,7 @@ function BloodBankReports() {
                       <div className="bb-stock-track">
                         <div
                           className="bb-stock-fill"
-                          style={{ width: `${(item.units / 120) * 100}%` }}
+                          style={{ width: `${Math.min(100, (item.units / Math.max(1, totalUnits || 10)) * 250)}%` }}
                         />
                       </div>
                     </td>

@@ -1,10 +1,11 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getUser, clearUser } from '../utils/auth';
 import './HospitalSettings.css';
 
 function HospitalSettings() {
   const navigate = useNavigate();
+  const currentUser = getUser();
 
   const [hospitalName, setHospitalName] = useState('City Hospital');
   const [hospitalEmail, setHospitalEmail] = useState('cityhospital@example.com');
@@ -15,9 +16,45 @@ function HospitalSettings() {
   const [requestUpdates, setRequestUpdates] = useState(true);
   const [lowStockAlerts, setLowStockAlerts] = useState(true);
 
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(data => {
+        if (data.hospital_name) setHospitalName(data.hospital_name);
+        if (data.hospital_email) setHospitalEmail(data.hospital_email);
+        if (data.hospital_phone) setPhone(data.hospital_phone);
+        if (data.hospital_address) setAddress(data.hospital_address);
+        if (data.hospital_email_alerts !== undefined) setEmailNotifications(data.hospital_email_alerts === 'true');
+        if (data.hospital_request_alerts !== undefined) setRequestUpdates(data.hospital_request_alerts === 'true');
+        if (data.hospital_low_stock_alerts !== undefined) setLowStockAlerts(data.hospital_low_stock_alerts === 'true');
+      })
+      .catch(() => {});
+  }, []);
+
   const handleSave = (e) => {
     e.preventDefault();
-    alert('Settings saved successfully!');
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        hospital_name: hospitalName,
+        hospital_email: hospitalEmail,
+        hospital_phone: phone,
+        hospital_address: address,
+        hospital_email_alerts: emailNotifications ? 'true' : 'false',
+        hospital_request_alerts: requestUpdates ? 'true' : 'false',
+        hospital_low_stock_alerts: lowStockAlerts ? 'true' : 'false'
+      })
+    })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) {
+          alert('Settings saved successfully to database!');
+        } else {
+          alert('Failed to save settings: ' + (res.error || ''));
+        }
+      })
+      .catch(err => alert('Network error: ' + err.message));
   };
 
   return (
@@ -49,7 +86,10 @@ function HospitalSettings() {
           </div>
         </nav>
 
-        <div className="hs-menu hs-logout" onClick={() => navigate('/')}>
+        <div className="hs-menu hs-logout" onClick={() => {
+          clearUser();
+          navigate('/');
+        }}>
           Logout
         </div>
       </aside>
@@ -61,7 +101,7 @@ function HospitalSettings() {
             <h1>Settings</h1>
             <p>Manage your hospital account and preferences.</p>
           </div>
-          <span className="hs-admin">Hospital Panel</span>
+          <span className="hs-admin">Logged in as: {currentUser?.username || 'Hospital Panel'}</span>
         </header>
 
         <form onSubmit={handleSave}>
@@ -86,7 +126,7 @@ function HospitalSettings() {
 
               <div className="hs-field">
                 <label>Hospital ID</label>
-                <input type="text" value="H001" disabled />
+                <input type="text" value={currentUser?.entityId || "F001"} disabled />
               </div>
 
               <div className="hs-field">

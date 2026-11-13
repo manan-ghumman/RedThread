@@ -13,9 +13,8 @@ public class AllocationHistory {
 
         System.out.println("\n========== ALLOCATION HISTORY ==========");
 
-        try {
-            PreparedStatement ps = conn.prepareStatement(query);
-            ResultSet rs = ps.executeQuery();
+        try (PreparedStatement ps = conn.prepareStatement(query);
+             ResultSet rs = ps.executeQuery()) {
 
             boolean found = false;
 
@@ -38,9 +37,6 @@ public class AllocationHistory {
             if (!found) {
                 System.out.println("No allocation records found.");
             }
-
-            rs.close();
-            ps.close();
 
         } catch (SQLException e) {
             System.out.println("Error fetching allocation history: "

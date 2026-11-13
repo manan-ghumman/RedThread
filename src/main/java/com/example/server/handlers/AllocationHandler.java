@@ -116,6 +116,15 @@ public class AllocationHandler {
         }
 
         private boolean allocateOne(Connection conn, BloodRequest request) throws SQLException {
+            // First try calling the OSDBMS stored procedure allocate_request
+            try (java.sql.CallableStatement cs = conn.prepareCall("{CALL allocate_request(?)}")) {
+                cs.setString(1, request.requestId);
+                cs.execute();
+                return true;
+            } catch (SQLException ex) {
+                // If stored procedure fails (e.g. not enough local stock), try network-wide fallback
+            }
+
             boolean previousAutoCommit = conn.getAutoCommit();
             conn.setAutoCommit(false);
 
@@ -140,7 +149,6 @@ public class AllocationHandler {
                         "WHERE bc.Type = ? " +
                         "AND bc.Status = 'Available' " +
                         "AND bc.ExpiryDate >= CURDATE() " +
-                        "AND bc.FacilityID = ? " +
                         "AND (donor_person.BloodType = ? OR " +
                         "(? = 'RBC' AND EXISTS (" +
                         "SELECT 1 FROM BLOOD_COMPATIBILITY c " +
@@ -155,13 +163,12 @@ public class AllocationHandler {
                 List<String> components = new ArrayList<>();
                 try (PreparedStatement ps = conn.prepareStatement(stockSql)) {
                     ps.setString(1, request.componentType);
-                    ps.setString(2, request.facilityId);
-                    ps.setString(3, request.bloodType);
-                    ps.setString(4, request.componentType);
+                    ps.setString(2, request.bloodType);
+                    ps.setString(3, request.componentType);
+                    ps.setString(4, request.bloodType);
                     ps.setString(5, request.bloodType);
-                    ps.setString(6, request.bloodType);
-                    ps.setString(7, request.priority);
-                    ps.setInt(8, request.quantity);
+                    ps.setString(6, request.priority);
+                    ps.setInt(7, request.quantity);
 
                     try (ResultSet rs = ps.executeQuery()) {
                         while (rs.next()) {

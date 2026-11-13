@@ -14,6 +14,7 @@ function AdminLayout({ title, active, children }) {
     ['Hospital Management', '/admin-hospitals'],
     ['Donor Management', '/admin-donors'],
     ['Blood Inventory Overview', '/admin-inventory'],
+    ['Equal Distribution (OS)', '/admin-distribution'],
     ['Request Monitoring', '/admin-requests'],
     ['Reports & Analytics', '/admin-reports'],
     ['Settings', '/admin-settings']
@@ -318,6 +319,233 @@ export function AdminInventory() {
   );
 }
 
+// 5b. EQUAL RESOURCE DISTRIBUTION (OS MIN-MAX FAIR SHARING BALANCER)
+
+export function AdminDistribution() {
+  const [districts, setDistricts] = useState([]);
+  const [selectedDistrict, setSelectedDistrict] = useState('Dehradun');
+  const [districtData, setDistrictData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [balancing, setBalancing] = useState(false);
+
+  const fetchDistricts = () => {
+    fetch('/api/admin/distribution')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setDistricts(data);
+          if (data.length > 0 && !selectedDistrict) {
+            setSelectedDistrict(data[0].location);
+          }
+        }
+      })
+      .catch(() => {});
+  };
+
+  const fetchDetail = (loc) => {
+    if (!loc) return;
+    setLoading(true);
+    fetch(`/api/admin/distribution?location=${encodeURIComponent(loc)}`)
+      .then(r => r.json())
+      .then(data => {
+        setDistrictData(data);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchDistricts();
+  }, []);
+
+  useEffect(() => {
+    if (selectedDistrict) {
+      fetchDetail(selectedDistrict);
+    }
+  }, [selectedDistrict]);
+
+  const handleBalance = (loc) => {
+    const isAll = loc === 'all';
+    const msg = isAll
+      ? 'Execute Fair-Share Equal Distribution across ALL districts in the network? Inter-facility unit transfers will balance stock.'
+      : `Execute Fair-Share Equal Distribution across all facilities in ${loc}? Surplus blood units will be distributed equally to deficit facilities.`;
+
+    if (!window.confirm(msg)) return;
+
+    setBalancing(true);
+    fetch('/api/admin/distribution', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ location: loc })
+    })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) {
+          alert(res.message || 'Equal distribution completed successfully!');
+          fetchDetail(selectedDistrict);
+          fetchDistricts();
+        } else {
+          alert('Distribution error: ' + (res.error || 'Failed to balance'));
+        }
+      })
+      .catch(err => alert('Network error: ' + err.message))
+      .finally(() => setBalancing(false));
+  };
+
+  const facilities = districtData?.facilities ? JSON.parse(districtData.facilities) : [];
+
+  return (
+    <AdminLayout title="District Equal Blood Distribution (OS Fair-Share)" active="Equal Distribution (OS)">
+      <section className="ad-section">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <h2>Operating System Fair-Share Resource Balancer</h2>
+            <p style={{ color: '#6b7280', fontSize: '14px', margin: '4px 0 0 0' }}>
+              Min-Max Fair Sharing algorithm: Balances blood components equally across all blood banks & hospitals in the same district.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={() => handleBalance(selectedDistrict)}
+              disabled={balancing || !districtData || districtData.totalUnits === '0'}
+              style={{
+                backgroundColor: '#a91f32',
+                color: 'white',
+                border: 'none',
+                padding: '10px 18px',
+                borderRadius: '6px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                opacity: balancing ? 0.7 : 1
+              }}
+            >
+              {balancing ? 'Balancing Stock...' : `⚖️ Balance ${selectedDistrict} Equally`}
+            </button>
+            <button
+              onClick={() => handleBalance('all')}
+              disabled={balancing}
+              style={{
+                backgroundColor: '#374151',
+                color: 'white',
+                border: 'none',
+                padding: '10px 18px',
+                borderRadius: '6px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              🌐 Balance All Districts
+            </button>
+          </div>
+        </div>
+
+        {/* District Selector & Stats Cards */}
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '20px', background: '#f9fafb', padding: '16px', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+          <label style={{ fontWeight: '600', color: '#374151' }}>Select District / City:</label>
+          <select
+            value={selectedDistrict}
+            onChange={e => setSelectedDistrict(e.target.value)}
+            style={{ padding: '8px 14px', borderRadius: '4px', border: '1px solid #d1d5db', fontSize: '14px', minWidth: '180px' }}
+          >
+            {districts.map(d => (
+              <option key={d.location} value={d.location}>
+                {d.location} ({d.totalUnits} units in {d.facilityCount} facilities)
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {districtData && (
+          <div className="ad-stats" style={{ marginBottom: '24px' }}>
+            <div className="ad-stat-box">
+              <h3>Facilities in {selectedDistrict}</h3>
+              <h2>{districtData.facilityCount}</h2>
+            </div>
+            <div className="ad-stat-box">
+              <h3>Total Available Units</h3>
+              <h2>{districtData.totalUnits}</h2>
+            </div>
+            <div className="ad-stat-box">
+              <h3>Fair-Share Target per Facility</h3>
+              <h2>{districtData.targetPerFacility} units</h2>
+            </div>
+            <div className="ad-stat-box">
+              <h3>Load Distribution Status</h3>
+              <h2 style={{ fontSize: '18px', color: districtData.facilities && JSON.parse(districtData.facilities).every(f => f.disparity === '0') ? '#059669' : '#d97706' }}>
+                {districtData.facilities && JSON.parse(districtData.facilities).every(f => f.disparity === '0') ? '✓ Perfectly Balanced' : '⚠️ Imbalanced (Action Needed)'}
+              </h2>
+            </div>
+          </div>
+        )}
+
+        {/* Facility Distribution Breakdown */}
+        <h3>Facility Stock Breakdown & Parity Table</h3>
+        {loading ? (
+          <p>Loading district distribution data...</p>
+        ) : (
+          <div className="ad-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Facility ID</th>
+                  <th>Facility Name</th>
+                  <th>Type / Level</th>
+                  <th>Current Stock</th>
+                  <th>Target Fair Share</th>
+                  <th>Parity Delta</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {facilities.length > 0 ? (
+                  facilities.map(f => {
+                    const disp = Number(f.disparity);
+                    return (
+                      <tr key={f.facilityId}>
+                        <td>{f.facilityId}</td>
+                        <td><strong>{f.facilityName}</strong></td>
+                        <td>{f.facilityLevel}</td>
+                        <td><span style={{ fontWeight: '600', fontSize: '15px' }}>{f.currentUnits}</span> units</td>
+                        <td>{f.targetUnits} units</td>
+                        <td>
+                          <span style={{
+                            color: disp > 0 ? '#059669' : (disp < 0 ? '#dc2626' : '#6b7280'),
+                            fontWeight: '600'
+                          }}>
+                            {disp > 0 ? `+${disp} (Surplus)` : (disp < 0 ? `${disp} (Deficit)` : '0 (Balanced)')}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{
+                            padding: '4px 10px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            backgroundColor: disp > 0 ? '#d1fae5' : (disp < 0 ? '#fee2e2' : '#f3f4f6'),
+                            color: disp > 0 ? '#065f46' : (disp < 0 ? '#991b1b' : '#374151')
+                          }}>
+                            {f.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '20px', color: '#6b7280' }}>
+                      No facilities found in this district.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </AdminLayout>
+  );
+}
+
 // 6. REQUEST MONITORING
 
 export function AdminRequests() {
@@ -393,9 +621,37 @@ export function AdminSettings() {
   const [email, setEmail] = useState('admin@redthread.com');
   const [alerts, setAlerts] = useState(true);
 
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(data => {
+        if (data.admin_name) setName(data.admin_name);
+        if (data.admin_email) setEmail(data.admin_email);
+        if (data.admin_alerts !== undefined) setAlerts(data.admin_alerts === 'true');
+      })
+      .catch(() => {});
+  }, []);
+
   const saveSettings = (e) => {
     e.preventDefault();
-    alert('Settings saved in this demo. Database connection will be added later.');
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        admin_name: name,
+        admin_email: email,
+        admin_alerts: alerts ? 'true' : 'false'
+      })
+    })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) {
+          alert('Settings saved successfully to database!');
+        } else {
+          alert('Failed to save settings: ' + (res.error || ''));
+        }
+      })
+      .catch(err => alert('Network error: ' + err.message));
   };
 
   return (

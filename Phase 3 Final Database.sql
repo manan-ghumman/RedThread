@@ -1,4 +1,4 @@
-﻿-- ==============================================================================
+-- ==============================================================================
 -- RedThread Blood Bank Management System (OSDBMS) - Phase 3 Final Database
 -- Target Database: Local MySQL (redthread_db)
 -- Architecture: Complete Database schema with USERS, APPOINTMENTS, SETTINGS,
@@ -1077,6 +1077,17 @@ INSERT INTO SYSTEM_SETTINGS (SettingKey, SettingValue, Description) VALUES
   ('low_stock_threshold', '10', 'Minimum component units before low stock alert triggers'),
   ('notifications_email', 'true', 'Global email notification dispatcher status'),
   ('notifications_sms', 'true', 'Global SMS notification dispatcher status');
+
+-- Auto-align seed donation and component expiry dates with active current date window
+UPDATE DONATION SET DonationDate = DATE_ADD(DonationDate, INTERVAL 60 DAY);
+UPDATE BLOOD_COMPONENT bc
+JOIN DONATION dn ON dn.DonationID = bc.DonationID
+SET bc.ExpiryDate = CASE 
+  WHEN bc.Type = 'Platelets' THEN DATE_ADD(dn.DonationDate, INTERVAL 45 DAY)
+  WHEN bc.Type = 'RBC' THEN DATE_ADD(dn.DonationDate, INTERVAL 60 DAY)
+  ELSE DATE_ADD(dn.DonationDate, INTERVAL 365 DAY)
+END;
+UPDATE BLOOD_COMPONENT SET Status = 'Available' WHERE Status = 'Expired' AND ExpiryDate >= CURDATE();
 
 -- 3. Indexes & Views
 

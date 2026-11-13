@@ -6,14 +6,17 @@ import com.sun.net.httpserver.HttpServer;
 
 import com.example.server.handlers.AlertHandler;
 import com.example.server.handlers.AllocationHandler;
+import com.example.server.handlers.AppointmentHandler;
 import com.example.server.handlers.AuthHandler;
 import com.example.server.handlers.CompatibilityHandler;
+import com.example.server.handlers.DistributionHandler;
 import com.example.server.handlers.DonationHandler;
 import com.example.server.handlers.DonorHandler;
 import com.example.server.handlers.FacilityHandler;
 import com.example.server.handlers.InventoryHandler;
 import com.example.server.handlers.PatientHandler;
 import com.example.server.handlers.RequestHandler;
+import com.example.server.handlers.SettingsHandler;
 import com.example.server.handlers.TransferHandler;
 
 import java.io.IOException;
@@ -52,6 +55,9 @@ public final class ApiServer {
         server.createContext("/api/transfers",     cors(new TransferHandler(conn)));
         server.createContext("/api/alerts",        cors(new AlertHandler(conn)));
         server.createContext("/api/compatibility", cors(new CompatibilityHandler(conn)));
+        server.createContext("/api/appointments",  cors(new AppointmentHandler(conn)));
+        server.createContext("/api/settings",      cors(new SettingsHandler(conn)));
+        server.createContext("/api/admin/distribution", cors(new DistributionHandler(conn)));
 
         server.setExecutor(null); // default single-threaded executor
         server.start();

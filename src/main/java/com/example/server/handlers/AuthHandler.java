@@ -58,12 +58,10 @@ public class AuthHandler implements HttpHandler {
             role = role.trim();
         }
 
-        // Try checking USERS table
-        boolean tableExists = true;
+        // Try checking USERS table by Username (role auto-detected from DB)
         try (PreparedStatement ps = conn.prepareStatement(
-                "SELECT UserID, Username, PasswordHash, Role, AssociatedID FROM USERS WHERE Username = ? AND Role = ?")) {
+                "SELECT UserID, Username, PasswordHash, Role, AssociatedID FROM USERS WHERE LOWER(Username) = LOWER(?)")) {
             ps.setString(1, username);
-            ps.setString(2, role);
 
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -87,7 +85,6 @@ public class AuthHandler implements HttpHandler {
             }
         } catch (SQLException e) {
             // USERS table might not be created yet if Phase 3 SQL is not yet executed
-            tableExists = false;
         }
 
         // Fallback demo authentication: Allows login with common testing credentials or matching role names

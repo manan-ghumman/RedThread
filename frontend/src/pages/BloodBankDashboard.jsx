@@ -18,8 +18,21 @@ function BloodBankDashboard() {
     { group: 'AB-', units: 0 }
   ]);
   const [requests, setRequests] = useState([]);
+  const [alerts, setAlerts] = useState([]);
   const [alertsCount, setAlertsCount] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  const fetchAlerts = () => {
+    fetch('/api/alerts')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setAlerts(data);
+          setAlertsCount(data.length);
+        }
+      })
+      .catch(() => {});
+  };
 
   useEffect(() => {
     Promise.all([
@@ -47,6 +60,7 @@ function BloodBankDashboard() {
       }
 
       if (Array.isArray(alertData)) {
+        setAlerts(alertData);
         setAlertsCount(alertData.length);
       }
 
@@ -56,6 +70,16 @@ function BloodBankDashboard() {
       setLoading(false);
     });
   }, []);
+
+  const dismissAlert = (alertId) => {
+    fetch(`/api/alerts?id=${alertId}`, { method: 'PUT' })
+      .then(r => r.json())
+      .then(() => {
+        setAlerts(prev => prev.filter(a => a.alertId !== String(alertId)));
+        setAlertsCount(prev => Math.max(0, prev - 1));
+      })
+      .catch(err => console.error('Error dismissing alert:', err));
+  };
 
   const totalUnits = bloodStock.reduce((acc, curr) => acc + curr.units, 0);
   const pendingRequests = requests.length;
@@ -140,6 +164,51 @@ function BloodBankDashboard() {
             </div>
           ))}
         </section>
+
+        {alerts.length > 0 && (
+          <section className="bb-stock-section" style={{ marginTop: '24px' }}>
+            <div className="bb-section-heading">
+              <h2>Active System Alerts ({alerts.length})</h2>
+              <button onClick={() => {
+                fetch('/api/alerts?id=all', { method: 'PUT' })
+                  .then(() => { setAlerts([]); setAlertsCount(0); });
+              }}>Dismiss All</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {alerts.map(a => (
+                <div key={a.alertId} style={{
+                  padding: '12px 16px',
+                  background: '#fef2f2',
+                  borderLeft: '4px solid #ef4444',
+                  borderRadius: '4px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div>
+                    <strong style={{ color: '#b91c1c' }}>[{a.alertType}]</strong>{' '}
+                    <span style={{ color: '#374151' }}>{a.message}</span>
+                    <span style={{ fontSize: '11px', color: '#9ca3af', marginLeft: '12px' }}>{a.createdAt}</span>
+                  </div>
+                  <button
+                    onClick={() => dismissAlert(a.alertId)}
+                    style={{
+                      background: 'none',
+                      border: '1px solid #ef4444',
+                      color: '#ef4444',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '12px'
+                    }}
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="bb-stock-section">
           <div className="bb-section-heading">

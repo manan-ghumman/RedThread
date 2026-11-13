@@ -49,17 +49,18 @@ function Login() {
         saveUser({
           userId: data.userId,
           username: data.username,
-          role: data.role,
+          role: data.role || role,
           associatedId: data.associatedId
         });
 
-        if (role === 'Hospital') {
+        const effectiveRole = data.role || role;
+        if (effectiveRole === 'Hospital') {
           navigate('/dashboard');
-        } else if (role === 'Blood Bank') {
+        } else if (effectiveRole === 'Blood Bank') {
           navigate('/blood-bank');
-        } else if (role === 'Donor') {
+        } else if (effectiveRole === 'Donor') {
           navigate('/donor-dashboard');
-        } else if (role === 'Admin') {
+        } else if (effectiveRole === 'Admin') {
           navigate('/admin-dashboard');
         }
       } else {

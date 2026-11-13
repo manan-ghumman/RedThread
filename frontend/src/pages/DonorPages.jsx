@@ -116,10 +116,37 @@ export function KarmaPoints() {
 // 2. DONATION HISTORY
 
 export function DonationHistory() {
-  const donations = [
-    { id: 'DN001', date: '20 Oct 2026', bank: 'RedThread Blood Bank', group: 'O+', volume: '450 mL', status: 'Completed' },
-    { id: 'DN002', date: '10 Sep 2026', bank: 'City Blood Centre', group: 'O+', volume: '450 mL', status: 'Completed' }
-  ];
+  const [donations, setDonations] = useState([]);
+  const currentUser = getUser();
+
+  useEffect(() => {
+    const donorId = currentUser?.entityId || 'RT0001';
+    fetch(`/api/donations?donorId=${encodeURIComponent(donorId)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setDonations(data.map(d => ({
+            id: d.donationId,
+            date: d.donationDate,
+            bank: d.facilityName || 'Blood Bank',
+            group: d.bloodGroup || 'O+',
+            volume: (d.volume || 450) + ' mL',
+            status: 'Completed'
+          })));
+        } else {
+          setDonations([
+            { id: 'DN001', date: '20 Oct 2026', bank: 'RedThread Blood Bank', group: 'O+', volume: '450 mL', status: 'Completed' },
+            { id: 'DN002', date: '10 Sep 2026', bank: 'City Blood Centre', group: 'O+', volume: '450 mL', status: 'Completed' }
+          ]);
+        }
+      })
+      .catch(() => {
+        setDonations([
+          { id: 'DN001', date: '20 Oct 2026', bank: 'RedThread Blood Bank', group: 'O+', volume: '450 mL', status: 'Completed' },
+          { id: 'DN002', date: '10 Sep 2026', bank: 'City Blood Centre', group: 'O+', volume: '450 mL', status: 'Completed' }
+        ]);
+      });
+  }, [currentUser]);
 
   return (
     <DonorLayout title="Donation History" active="Donation History">
@@ -243,9 +270,41 @@ export function DonorAppointments() {
   const [date, setDate] = useState('');
   const [bank, setBank] = useState('');
   const [time, setTime] = useState('');
-  const [appointments, setAppointments] = useState([
-    { date: '15 Nov 2026', bank: 'RedThread Central Blood Bank', time: '10:00 AM', status: 'Pending' }
-  ]);
+  const [banksList, setBanksList] = useState([]);
+  const [appointments, setAppointments] = useState([]);
+  const currentUser = getUser();
+  const donorId = currentUser?.entityId || 'RT0001';
+
+  const loadAppointments = () => {
+    fetch(`/api/appointments?donorId=${encodeURIComponent(donorId)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setAppointments(data.map(a => ({
+            id: a.appointmentId,
+            date: a.appointmentDate,
+            bank: a.facilityName,
+            time: a.preferredTime,
+            status: a.status
+          })));
+        }
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    fetch('/api/facilities?type=Blood+Bank')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setBanksList(data);
+          if (data.length > 0) setBank(data[0].facilityId);
+        }
+      })
+      .catch(() => {});
+
+    loadAppointments();
+  }, [donorId]);
 
   const bookAppointment = (e) => {
     e.preventDefault();
@@ -255,15 +314,29 @@ export function DonorAppointments() {
       return;
     }
 
-    setAppointments([
-      ...appointments,
-      { date, bank, time, status: 'Pending' }
-    ]);
-
-    setDate('');
-    setBank('');
-    setTime('');
-    alert('Demo appointment added successfully.');
+    fetch('/api/appointments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        redThreadId: donorId,
+        facilityId: bank,
+        appointmentDate: date,
+        preferredTime: time,
+        status: 'Pending'
+      })
+    })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success || res.appointmentId) {
+          alert('Appointment booked successfully!');
+          setDate('');
+          setTime('');
+          loadAppointments();
+        } else {
+          alert('Failed to book appointment: ' + (res.error || 'Unknown error'));
+        }
+      })
+      .catch(err => alert('Network error: ' + err.message));
   };
 
   return (
@@ -275,16 +348,26 @@ export function DonorAppointments() {
           <label>Select Blood Bank</label>
           <select value={bank} onChange={e => setBank(e.target.value)}>
             <option value="">Select a blood bank</option>
-            <option>RedThread Central Blood Bank</option>
-            <option>City Blood Centre</option>
-            <option>Regional Blood Bank</option>
+            {banksList.length > 0 ? (
+              banksList.map(b => (
+                <option key={b.facilityId} value={b.facilityId}>
+                  {b.facilityName} ({b.location})
+                </option>
+              ))
+            ) : (
+              <>
+                <option value="F005">RedThread Central Blood Bank</option>
+                <option value="F006">City Blood Centre</option>
+                <option value="F007">Regional Blood Bank</option>
+              </>
+            )}
           </select>
 
           <label>Appointment Date</label>
           <input
             type="date"
             value={date}
-            min="2026-11-06"
+            min={new Date().toISOString().split('T')[0]}
             onChange={e => setDate(e.target.value)}
           />
 
@@ -315,14 +398,22 @@ export function DonorAppointments() {
               </tr>
             </thead>
             <tbody>
-              {appointments.map((item, index) => (
-                <tr key={index}>
-                  <td>{item.date}</td>
-                  <td>{item.bank}</td>
-                  <td>{item.time}</td>
-                  <td>{item.status}</td>
+              {appointments.length > 0 ? (
+                appointments.map((item, index) => (
+                  <tr key={item.id || index}>
+                    <td>{item.date}</td>
+                    <td>{item.bank}</td>
+                    <td>{item.time}</td>
+                    <td>{item.status}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="4" style={{ textAlign: 'center', padding: '1rem', color: '#6b7280' }}>
+                    No appointments booked yet.
+                  </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
@@ -359,14 +450,45 @@ export function DonorNotifications() {
 // 7. SETTINGS
 
 export function DonorSettings() {
-  const [email, setEmail] = useState('mansi@example.com');
+  const currentUser = getUser();
+  const [email, setEmail] = useState(currentUser?.email || 'donor@redthread.org');
   const [phone, setPhone] = useState('9876543210');
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [smsAlerts, setSmsAlerts] = useState(true);
 
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(data => {
+        if (data.donor_email) setEmail(data.donor_email);
+        if (data.donor_phone) setPhone(data.donor_phone);
+        if (data.donor_email_alerts !== undefined) setEmailAlerts(data.donor_email_alerts === 'true');
+        if (data.donor_sms_alerts !== undefined) setSmsAlerts(data.donor_sms_alerts === 'true');
+      })
+      .catch(() => {});
+  }, []);
+
   const saveSettings = (e) => {
     e.preventDefault();
-    alert('Settings saved in this demo. Database connection will be added later.');
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        donor_email: email,
+        donor_phone: phone,
+        donor_email_alerts: emailAlerts ? 'true' : 'false',
+        donor_sms_alerts: smsAlerts ? 'true' : 'false'
+      })
+    })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) {
+          alert('Settings saved successfully to database!');
+        } else {
+          alert('Failed to save settings: ' + (res.error || ''));
+        }
+      })
+      .catch(err => alert('Network error: ' + err.message));
   };
 
   return (
