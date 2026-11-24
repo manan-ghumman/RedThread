@@ -14,7 +14,7 @@ public class AllocationHistory {
         System.out.println("\n========== ALLOCATION HISTORY ==========");
 
         try (PreparedStatement ps = conn.prepareStatement(query);
-             ResultSet rs = ps.executeQuery()) {
+                ResultSet rs = ps.executeQuery()) {
 
             boolean found = false;
 

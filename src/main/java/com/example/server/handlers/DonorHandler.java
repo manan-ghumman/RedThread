@@ -31,15 +31,21 @@ public class DonorHandler implements HttpHandler {
             handleGet(exchange);
         } else if ("POST".equalsIgnoreCase(method)) {
             handlePost(exchange);
+        } else if ("PUT".equalsIgnoreCase(method)) {
+            handlePut(exchange);
         } else {
             ApiServer.sendJson(exchange, 405, JsonUtil.errorJson("Method not allowed"));
         }
     }
 
     private void handleGet(HttpExchange exchange) throws IOException {
-        String sql = "SELECT d.RedThreadID, p.Name, p.BloodType, d.KarmaPoints, d.EligibilityStatus " +
+        String sql = "SELECT d.RedThreadID, p.Name, p.BloodType, d.KarmaPoints, d.EligibilityStatus, " +
+                     "u.Email, " +
+                     "(SELECT SettingValue FROM SYSTEM_SETTINGS WHERE SettingKey = CONCAT('donor_phone_', d.RedThreadID)) AS Phone, " +
+                     "(SELECT SettingValue FROM SYSTEM_SETTINGS WHERE SettingKey = CONCAT('donor_address_', d.RedThreadID)) AS Address " +
                      "FROM DONOR d " +
                      "JOIN PERSON p ON p.RedThreadID = d.RedThreadID " +
+                     "LEFT JOIN USERS u ON u.AssociatedID = d.RedThreadID " +
                      "ORDER BY d.RedThreadID";
 
         try (PreparedStatement ps = conn.prepareStatement(sql);
@@ -49,10 +55,18 @@ public class DonorHandler implements HttpHandler {
             while (rs.next()) {
                 Map<String, String> m = new LinkedHashMap<>();
                 m.put("id", JsonUtil.quoted(rs.getString("RedThreadID")));
+                m.put("donorId", JsonUtil.quoted(rs.getString("RedThreadID")));
                 m.put("name", JsonUtil.quoted(rs.getString("Name") != null ? rs.getString("Name") : ""));
                 m.put("bloodType", JsonUtil.quoted(rs.getString("BloodType")));
+                m.put("bloodGroup", JsonUtil.quoted(rs.getString("BloodType")));
                 m.put("karmaPoints", String.valueOf(rs.getInt("KarmaPoints")));
                 m.put("eligibility", JsonUtil.quoted(rs.getString("EligibilityStatus")));
+                String email = rs.getString("Email");
+                m.put("email", email != null ? JsonUtil.quoted(email) : "\"donor@redthread.org\"");
+                String phone = rs.getString("Phone");
+                m.put("phone", phone != null ? JsonUtil.quoted(phone) : "\"9876543210\"");
+                String addr = rs.getString("Address");
+                m.put("address", addr != null ? JsonUtil.quoted(addr) : "\"Dehradun, Uttarakhand\"");
                 list.add(JsonUtil.jsonObject(m));
             }
             ApiServer.sendJson(exchange, 200, JsonUtil.jsonArray(list));
@@ -116,5 +130,72 @@ public class DonorHandler implements HttpHandler {
             } catch (SQLException ignored) {}
         }
     }
-}
 
+    private void handlePut(HttpExchange exchange) throws IOException {
+        String body = ApiServer.readBody(exchange);
+        Map<String, String> data = JsonUtil.parseJsonBody(body);
+
+        String id = data.get("id");
+        if (id == null || id.trim().isEmpty()) {
+            id = data.get("donorId");
+        }
+        String name = data.get("name");
+        String email = data.get("email");
+        String phone = data.get("phone");
+        String address = data.get("address");
+
+        if (id == null || id.trim().isEmpty()) {
+            ApiServer.sendJson(exchange, 400, JsonUtil.errorJson("Donor ID is required"));
+            return;
+        }
+
+        id = id.trim();
+
+        try {
+            if (name != null && !name.trim().isEmpty()) {
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "UPDATE PERSON SET Name = ? WHERE RedThreadID = ?")) {
+                    ps.setString(1, name.trim());
+                    ps.setString(2, id);
+                    ps.executeUpdate();
+                }
+            }
+
+            if (email != null && !email.trim().isEmpty()) {
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "UPDATE USERS SET Email = ? WHERE AssociatedID = ?")) {
+                    ps.setString(1, email.trim());
+                    ps.setString(2, id);
+                    ps.executeUpdate();
+                }
+            }
+
+            if (phone != null) {
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "INSERT INTO SYSTEM_SETTINGS (SettingKey, SettingValue, Description) VALUES (?, ?, ?) " +
+                        "ON DUPLICATE KEY UPDATE SettingValue = VALUES(SettingValue)")) {
+                    ps.setString(1, "donor_phone_" + id);
+                    ps.setString(2, phone.trim());
+                    ps.setString(3, "Phone for donor " + id);
+                    ps.executeUpdate();
+                }
+            }
+
+            if (address != null) {
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "INSERT INTO SYSTEM_SETTINGS (SettingKey, SettingValue, Description) VALUES (?, ?, ?) " +
+                        "ON DUPLICATE KEY UPDATE SettingValue = VALUES(SettingValue)")) {
+                    ps.setString(1, "donor_address_" + id);
+                    ps.setString(2, address.trim());
+                    ps.setString(3, "Address for donor " + id);
+                    ps.executeUpdate();
+                }
+            }
+
+            ApiServer.sendJson(exchange, 200, JsonUtil.successJson("Donor profile updated successfully"));
+
+        } catch (SQLException e) {
+            ApiServer.sendJson(exchange, 500, JsonUtil.errorJson("Failed to update donor profile: " + e.getMessage()));
+        }
+    }
+}

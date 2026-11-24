@@ -584,28 +584,386 @@ export function AdminRequests() {
 // 7. REPORTS & ANALYTICS
 
 export function AdminReports() {
+  const [activeReport, setActiveReport] = useState(null);
+  const [reportData, setReportData] = useState([]);
+  const [loading, setLoading] = useState(false);
+
   const reports = [
-    ['Blood Donation Report', 'Total donations recorded'],
-    ['Blood Inventory Report', 'Current stock across facilities'],
-    ['Blood Request Report', 'Requests and their status'],
-    ['Expiry Report', 'Expired and soon-to-expire units'],
-    ['Donor Activity Report', 'Donations and Karma Points']
+    { id: 'donations', name: 'Blood Donation Report', desc: 'Total donations recorded across collection camps and centers' },
+    { id: 'inventory', name: 'Blood Inventory Report', desc: 'Current active component stock breakdown by blood type' },
+    { id: 'requests', name: 'Blood Request Report', desc: 'Hospital requisition volume, urgency classification, and status' },
+    { id: 'expiry', name: 'Expiry & Quality Audit Report', desc: 'Perishable component alerts, expiration risk, and quarantine logs' },
+    { id: 'donors', name: 'Donor Activity & Karma Report', desc: 'Donor registration roster, eligibility, and Karma Points ledger' }
   ];
+
+  const handleOpenReport = (report) => {
+    setActiveReport(report);
+    setLoading(true);
+
+    if (report.id === 'donations') {
+      fetch('/api/donations')
+        .then(r => r.json())
+        .then(data => setReportData(Array.isArray(data) ? data : []))
+        .catch(() => setReportData([]))
+        .finally(() => setLoading(false));
+    } else if (report.id === 'inventory') {
+      fetch('/api/inventory')
+        .then(r => r.json())
+        .then(data => setReportData(Array.isArray(data) ? data : []))
+        .catch(() => setReportData([]))
+        .finally(() => setLoading(false));
+    } else if (report.id === 'requests') {
+      fetch('/api/requests')
+        .then(r => r.json())
+        .then(data => setReportData(Array.isArray(data) ? data : []))
+        .catch(() => setReportData([]))
+        .finally(() => setLoading(false));
+    } else if (report.id === 'expiry') {
+      fetch('/api/alerts')
+        .then(r => r.json())
+        .then(data => setReportData(Array.isArray(data) ? data : []))
+        .catch(() => setReportData([]))
+        .finally(() => setLoading(false));
+    } else if (report.id === 'donors') {
+      fetch('/api/donors')
+        .then(r => r.json())
+        .then(data => setReportData(Array.isArray(data) ? data : []))
+        .catch(() => setReportData([]))
+        .finally(() => setLoading(false));
+    }
+  };
+
+  const renderReportContent = () => {
+    if (loading) {
+      return <p style={{ padding: '20px', color: '#6b7280' }}>Generating real-time database report...</p>;
+    }
+
+    if (!activeReport) return null;
+
+    if (activeReport.id === 'donations') {
+      const totalVol = reportData.reduce((acc, d) => acc + Number(d.volume || 450), 0);
+      return (
+        <div>
+          <div className="ad-stats" style={{ marginBottom: '20px' }}>
+            <div className="ad-stat-box">
+              <h3>Total Donations</h3>
+              <h2>{reportData.length}</h2>
+            </div>
+            <div className="ad-stat-box">
+              <h3>Total Volume Collected</h3>
+              <h2>{totalVol.toLocaleString()} mL</h2>
+            </div>
+            <div className="ad-stat-box">
+              <h3>Avg. Volume / Donor</h3>
+              <h2>{reportData.length > 0 ? Math.round(totalVol / reportData.length) : 0} mL</h2>
+            </div>
+          </div>
+          <div className="ad-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Donation ID</th>
+                  <th>Donor ID</th>
+                  <th>Blood Group</th>
+                  <th>Facility</th>
+                  <th>Date</th>
+                  <th>Volume</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reportData.map((d, i) => (
+                  <tr key={d.donationId || i}>
+                    <td><strong>{d.donationId}</strong></td>
+                    <td>{d.redThreadId}</td>
+                    <td><span style={{ fontWeight: 600, color: '#b91c1c' }}>{d.bloodGroup}</span></td>
+                    <td>{d.facilityName || d.facilityId}</td>
+                    <td>{d.donationDate}</td>
+                    <td>{d.volume} mL</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    if (activeReport.id === 'inventory') {
+      const totalUnits = reportData.reduce((acc, item) => acc + Number(item.availableUnits || 0), 0);
+      return (
+        <div>
+          <div className="ad-stats" style={{ marginBottom: '20px' }}>
+            <div className="ad-stat-box">
+              <h3>Total Units in Stock</h3>
+              <h2>{totalUnits}</h2>
+            </div>
+            <div className="ad-stat-box">
+              <h3>Blood Type Categories</h3>
+              <h2>{reportData.length}</h2>
+            </div>
+          </div>
+          <div className="ad-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Blood Group</th>
+                  <th>Component Type</th>
+                  <th>Available Units</th>
+                  <th>Stock Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reportData.map((item, i) => (
+                  <tr key={i}>
+                    <td><strong>{item.bloodType}</strong></td>
+                    <td>{item.component}</td>
+                    <td><span style={{ fontWeight: 600 }}>{item.availableUnits}</span> units</td>
+                    <td>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        backgroundColor: item.availableUnits > 5 ? '#d1fae5' : '#fee2e2',
+                        color: item.availableUnits > 5 ? '#065f46' : '#991b1b'
+                      }}>
+                        {item.availableUnits > 5 ? 'Adequate' : 'Low Stock'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    if (activeReport.id === 'requests') {
+      const emergencyCount = reportData.filter(r => r.priority === 'Emergency' || r.priority === 'Critical').length;
+      const allocatedCount = reportData.filter(r => r.status === 'Allocated').length;
+      return (
+        <div>
+          <div className="ad-stats" style={{ marginBottom: '20px' }}>
+            <div className="ad-stat-box">
+              <h3>Total Requests Raised</h3>
+              <h2>{reportData.length}</h2>
+            </div>
+            <div className="ad-stat-box">
+              <h3>Emergency / Critical</h3>
+              <h2 style={{ color: '#dc2626' }}>{emergencyCount}</h2>
+            </div>
+            <div className="ad-stat-box">
+              <h3>Allocated & Fulfilled</h3>
+              <h2 style={{ color: '#059669' }}>{allocatedCount}</h2>
+            </div>
+          </div>
+          <div className="ad-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Request ID</th>
+                  <th>Facility</th>
+                  <th>Blood Group</th>
+                  <th>Component</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reportData.map((r, i) => (
+                  <tr key={r.requestId || i}>
+                    <td><strong>{r.requestId}</strong></td>
+                    <td>{r.facilityId}</td>
+                    <td>{r.bloodType}</td>
+                    <td>{r.componentType}</td>
+                    <td>
+                      <span style={{
+                        fontWeight: 600,
+                        color: r.priority === 'Emergency' || r.priority === 'Critical' ? '#dc2626' : '#374151'
+                      }}>
+                        {r.priority}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{
+                        padding: '3px 8px',
+                        borderRadius: '10px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        backgroundColor: r.status === 'Allocated' ? '#d1fae5' : '#fef3c7',
+                        color: r.status === 'Allocated' ? '#065f46' : '#92400e'
+                      }}>
+                        {r.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    if (activeReport.id === 'expiry') {
+      return (
+        <div>
+          <div className="ad-stats" style={{ marginBottom: '20px' }}>
+            <div className="ad-stat-box">
+              <h3>Active Expiry & Stock Alerts</h3>
+              <h2>{reportData.length}</h2>
+            </div>
+          </div>
+          <div className="ad-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Alert ID</th>
+                  <th>Facility ID</th>
+                  <th>Alert Type</th>
+                  <th>System Message</th>
+                  <th>Timestamp</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reportData.map((a, i) => (
+                  <tr key={a.alertId || i}>
+                    <td>{a.alertId}</td>
+                    <td>{a.facilityId}</td>
+                    <td><strong style={{ color: '#dc2626' }}>{a.alertType}</strong></td>
+                    <td>{a.message}</td>
+                    <td>{a.createdAt}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    if (activeReport.id === 'donors') {
+      const eligibleCount = reportData.filter(d => d.eligibility === 'Eligible').length;
+      return (
+        <div>
+          <div className="ad-stats" style={{ marginBottom: '20px' }}>
+            <div className="ad-stat-box">
+              <h3>Registered Donors</h3>
+              <h2>{reportData.length}</h2>
+            </div>
+            <div className="ad-stat-box">
+              <h3>Clinically Eligible</h3>
+              <h2 style={{ color: '#059669' }}>{eligibleCount}</h2>
+            </div>
+          </div>
+          <div className="ad-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Donor ID</th>
+                  <th>Full Name</th>
+                  <th>Blood Group</th>
+                  <th>Karma Points</th>
+                  <th>Eligibility</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reportData.map((d, i) => (
+                  <tr key={d.id || i}>
+                    <td><strong>{d.id || d.donorId}</strong></td>
+                    <td>{d.name}</td>
+                    <td><span style={{ fontWeight: 600, color: '#b91c1c' }}>{d.bloodType || d.bloodGroup}</span></td>
+                    <td><span style={{ fontWeight: 600, color: '#059669' }}>+{d.karmaPoints || 0}</span></td>
+                    <td>
+                      <span style={{
+                        padding: '3px 8px',
+                        borderRadius: '10px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        backgroundColor: d.eligibility === 'Eligible' ? '#d1fae5' : '#fee2e2',
+                        color: d.eligibility === 'Eligible' ? '#065f46' : '#991b1b'
+                      }}>
+                        {d.eligibility}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
 
   return (
     <AdminLayout title="Reports & Analytics" active="Reports & Analytics">
       <section className="ad-section">
-        <h2>System Reports</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div>
+            <h2>Clinical & System Audit Reports</h2>
+            <p style={{ color: '#6b7280', fontSize: '14px', margin: '4px 0 0 0' }}>
+              Real-time operational reporting generated from transactional logs and inventory registries.
+            </p>
+          </div>
+          {activeReport && (
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => window.print()}
+                style={{
+                  background: '#374151',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 16px',
+                  borderRadius: '4px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                🖨️ Print Report
+              </button>
+              <button
+                onClick={() => setActiveReport(null)}
+                style={{
+                  background: '#a91f32',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 16px',
+                  borderRadius: '4px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                ✕ Close Report
+              </button>
+            </div>
+          )}
+        </div>
+
+        {activeReport ? (
+          <div style={{ background: '#f9fafb', padding: '24px', borderRadius: '8px', border: '1px solid #e5e7eb', marginBottom: '30px' }}>
+            <div style={{ marginBottom: '16px', borderBottom: '1px solid #e5e7eb', paddingBottom: '10px' }}>
+              <h2 style={{ color: '#a91f32', margin: 0 }}>{activeReport.name}</h2>
+              <p style={{ color: '#4b5563', margin: '4px 0 0 0' }}>{activeReport.desc}</p>
+            </div>
+            {renderReportContent()}
+          </div>
+        ) : null}
+
+        <h3>Available Report Catalog</h3>
         <DataTable
           columns={['Report Name', 'Description', 'Action']}
-          rows={reports.map(([name, description]) => [
-            name,
-            description,
+          rows={reports.map(r => [
+            <strong>{r.name}</strong>,
+            r.desc,
             <button
               className="ad-action-button"
-              onClick={() => alert('Report generation will be connected later.')}
+              onClick={() => handleOpenReport(r)}
             >
-              View Report
+              📊 Generate Live Report
             </button>
           ])}
         />
